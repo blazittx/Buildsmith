@@ -7,6 +7,7 @@ import { GameDetails } from '../components/library/GameDetails';
 import { GameProperties } from '../components/library/GameProperties';
 import { GameContextMenu } from '../components/library/GameContextMenu';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import SteamIdDialog from '../components/library/SteamIdDialog';
 import Cookies from 'js-cookie';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLocation } from 'react-router-dom';
@@ -40,6 +41,7 @@ const LibraryPage = () => {
   const [runningGames, setRunningGames] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [startingUpdate, setStartingUpdate] = useState({});
+  const [steamDialogOpen, setSteamDialogOpen] = useState(false);
 
   const fetchLocalVersion = useCallback(
     async gameId => {
@@ -523,6 +525,30 @@ const LibraryPage = () => {
     }
   };
 
+  const handleSteamClick = () => {
+    if (!selectedGame) return;
+    setSteamDialogOpen(true);
+  };
+
+  const handleSteamIdConfirm = async steamId => {
+    if (!selectedGame || !window.electronAPI) return;
+
+    try {
+      await window.electronAPI.createSteamAppIdFile(selectedGame.game_id, steamId);
+      if (window.electronAPI.showCustomNotification) {
+        window.electronAPI.showCustomNotification(
+          'Steam Integration Added',
+          `Steam App ID ${steamId} has been added to ${selectedGame.game_name}`
+        );
+      }
+    } catch (err) {
+      console.error('Error creating Steam App ID file:', err);
+      if (window.electronAPI.showCustomNotification) {
+        window.electronAPI.showCustomNotification('Error', 'Failed to create Steam App ID file');
+      }
+    }
+  };
+
   // Remove from library handler
   const handleRemoveFromLibrary = async () => {
     if (!selectedGame) return;
@@ -776,6 +802,7 @@ const LibraryPage = () => {
             onDownload={handleDownloadGame}
             onUpdate={handleUpdateGame}
             onStop={handleStopGame}
+            onSteamClick={handleSteamClick}
           />
         </Grid>
       </Grid>
@@ -812,6 +839,13 @@ const LibraryPage = () => {
         onConfirm={handleUninstallGame}
         title="Uninstall Game"
         message={`Are you sure you want to uninstall ${selectedGame?.game_name}?`}
+      />
+
+      <SteamIdDialog
+        open={steamDialogOpen}
+        onClose={() => setSteamDialogOpen(false)}
+        onConfirm={handleSteamIdConfirm}
+        gameName={selectedGame?.game_name}
       />
     </Box>
   );

@@ -545,6 +545,28 @@ function initIPCHandlers() {
       throw error;
     }
   });
+
+  // Steam App ID file creation
+  ipcMain.handle('create-steam-appid-file', async (event, gameId, steamId) => {
+    try {
+      const gamePath = path.join(buildsmithPath, gameId);
+      const steamAppIdPath = path.join(gamePath, 'steam_appid.txt');
+
+      // Check if game directory exists
+      if (!fs.existsSync(gamePath)) {
+        throw new Error(`Game directory does not exist: ${gamePath}`);
+      }
+
+      // Write the Steam App ID to the file
+      await fs.promises.writeFile(steamAppIdPath, steamId, 'utf8');
+
+      console.log(`Created steam_appid.txt for game ${gameId} with App ID: ${steamId}`);
+      return true;
+    } catch (error) {
+      console.error('Error creating Steam App ID file:', error);
+      throw error;
+    }
+  });
 }
 
 module.exports = {

@@ -132,6 +132,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUnityPackage: packagePath => ipcRenderer.invoke('install-unity-package', packagePath),
   getLastDownloadedPath: () => ipcRenderer.invoke('get-last-downloaded-path'),
   deleteFile: filePath => ipcRenderer.invoke('delete-file', filePath),
+  createSteamAppIdFile: (gameId, steamId) =>
+    ipcRenderer.invoke('create-steam-appid-file', gameId, steamId),
 });
 
 contextBridge.exposeInMainWorld('githubAPI', {

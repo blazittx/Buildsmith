@@ -1,5 +1,14 @@
-import React from 'react';
-import { Box, Typography, Stack, Paper, LinearProgress, Divider } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Stack,
+  Paper,
+  LinearProgress,
+  Divider,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DownloadIcon from '@mui/icons-material/Download';
 import UpdateIcon from '@mui/icons-material/Update';
@@ -8,6 +17,36 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import StorageIcon from '@mui/icons-material/Storage';
 import { colors } from '../../theme/colors';
 import ImageButton from '../button/ImageButton';
+
+// Steam button styling constants (matching AccountSettings)
+const steamButtonStyle = {
+  background: '#000',
+  borderRadius: '4px',
+  width: 48,
+  height: 48,
+  border: `1px solid ${colors.border}`,
+  transition: 'background 0.2s, border-color 0.2s',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  p: 0,
+  boxShadow: '0 1px 4px 0 rgba(0,0,0,0.03)',
+  '&:hover': {
+    background: '#fff',
+    borderColor: '#fff',
+  },
+};
+
+const steamIconStyle = {
+  width: 24,
+  height: 24,
+  filter: 'invert(100%)',
+  transition: 'filter 0.2s',
+};
+
+const steamIconHoverStyle = {
+  filter: 'invert(0%)',
+};
 
 export const GameDetails = ({
   game,
@@ -26,8 +65,10 @@ export const GameDetails = ({
   onDownload,
   onUpdate,
   onStop,
+  onSteamClick,
   updateStep,
 }) => {
+  const [steamHovered, setSteamHovered] = useState(false);
   if (!game) {
     return (
       <Box
@@ -115,20 +156,13 @@ export const GameDetails = ({
             top: 0,
             left: 0,
             zIndex: 1,
+            maskImage:
+              'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%)',
           }}
         />
-        {/* Gradient overlay */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 2,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.95) 100%)',
-          }}
-        />
+
         {/* Title and version overlay */}
         <Box
           sx={{
@@ -152,8 +186,8 @@ export const GameDetails = ({
       </Box>
 
       {/* Action Button (fixed below banner) */}
-      <Box sx={{ px: 3, pt: 3, pb: 2, bgcolor: 'rgba(0,0,0,0.7)', zIndex: 4 }}>
-        <Stack direction="row" spacing={2}>
+      <Box sx={{ px: 3, pt: 3, pb: 2, bgcolor: 'transparent', zIndex: 4 }}>
+        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
           <ImageButton
             text={buttonText}
             icon={buttonIcon}
@@ -161,6 +195,24 @@ export const GameDetails = ({
             style={{ minWidth: 200, height: 48, padding: '12px 24px' }}
             disabled={buttonDisabled}
           />
+          {isInstalled && (
+            <Tooltip title="Add Steam Integration" placement="left">
+              <IconButton
+                sx={steamButtonStyle}
+                onMouseEnter={() => setSteamHovered(true)}
+                onMouseLeave={() => setSteamHovered(false)}
+                onClick={onSteamClick}
+              >
+                <img
+                  src="/logos/steam.svg"
+                  alt="Steam"
+                  style={
+                    steamHovered ? { ...steamIconStyle, ...steamIconHoverStyle } : steamIconStyle
+                  }
+                />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
         {/* Download/Update Progress */}
         {downloadProgress && (
