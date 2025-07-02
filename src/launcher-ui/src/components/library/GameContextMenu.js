@@ -1,5 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { Popover, MenuItem, ListItemIcon, ListItemText, Box } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Popover,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Box,
+  CircularProgress,
+} from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DownloadIcon from '@mui/icons-material/Download';
 import UpdateIcon from '@mui/icons-material/Update';
@@ -27,6 +34,28 @@ export const GameContextMenu = ({
   onRemoveFromLibrary,
 }) => {
   const paperRef = useRef(null);
+  const [canRemoveFromLibrary, setCanRemoveFromLibrary] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+
+  // Reset and start timer when menu opens
+  useEffect(() => {
+    if (anchorEl) {
+      setCanRemoveFromLibrary(false);
+      setCountdown(5);
+
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            setCanRemoveFromLibrary(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(countdownInterval);
+    }
+  }, [anchorEl]);
 
   // Native-like context menu: close and re-dispatch click/contextmenu if outside
   useEffect(() => {
@@ -189,14 +218,14 @@ export const GameContextMenu = ({
                 onClose();
               }}
               sx={{
-                color: colors.text,
+                color: colors.error,
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: 'rgba(255, 85, 85, 0.1)',
                 },
               }}
             >
               <ListItemIcon>
-                <DeleteIcon sx={{ color: colors.text }} />
+                <DeleteIcon sx={{ color: colors.error }} />
               </ListItemIcon>
               <ListItemText>Uninstall</ListItemText>
             </MenuItem>
@@ -206,18 +235,49 @@ export const GameContextMenu = ({
         {/* Remove from Library (always available) */}
         <MenuItem
           onClick={() => {
-            if (onRemoveFromLibrary) onRemoveFromLibrary();
+            if (onRemoveFromLibrary && canRemoveFromLibrary) onRemoveFromLibrary();
             onClose();
           }}
+          disabled={!canRemoveFromLibrary}
           sx={{
-            color: '#ff5555',
+            color: canRemoveFromLibrary ? colors.error : colors.textSecondary,
             '&:hover': {
-              backgroundColor: 'rgba(255, 85, 85, 0.1)',
+              backgroundColor: canRemoveFromLibrary ? 'rgba(255, 85, 85, 0.1)' : 'transparent',
+            },
+            '&.Mui-disabled': {
+              color: colors.textSecondary,
             },
           }}
         >
           <ListItemIcon>
-            <RemoveCircleOutlineIcon sx={{ color: '#ff5555' }} />
+            {canRemoveFromLibrary ? (
+              <RemoveCircleOutlineIcon sx={{ color: colors.error }} />
+            ) : (
+              <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                <CircularProgress
+                  size={24}
+                  thickness={2}
+                  variant="determinate"
+                  value={((5 - countdown) / 5) * 100}
+                  sx={{
+                    color: colors.error,
+                    '& .MuiCircularProgress-circle': {
+                      strokeLinecap: 'round',
+                    },
+                  }}
+                />
+                <RemoveCircleOutlineIcon
+                  sx={{
+                    color: colors.textSecondary,
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: 20,
+                  }}
+                />
+              </Box>
+            )}
           </ListItemIcon>
           <ListItemText>Remove from Library</ListItemText>
         </MenuItem>

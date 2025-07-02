@@ -114,3 +114,7 @@ path = "/update-package"
 [[edge_functions]]
 function = "delete-package"
 path = "/delete-package"
+
+[[edge_functions]]
+function = "get-game-by-id"
+path = "/get-game-by-id/*"

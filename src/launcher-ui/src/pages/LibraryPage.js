@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Cookies from 'js-cookie';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLocation } from 'react-router-dom';
+import { autoAddGameToLibrary } from '../utils/autoAddGame';
 
 const LibraryPage = () => {
   const location = useLocation();
@@ -345,6 +346,44 @@ const LibraryPage = () => {
       setSelectedGame(cachedGames[0]);
     }
   }, [cachedGames, selectedGame, location.search]);
+
+  // Add effect to handle automatic game addition from URL parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const gameId = params.get('game');
+
+    if (gameId) {
+      // Check if the game is already in the library
+      const isInLibrary = cachedGames.some(g => g.game_id === gameId);
+
+      if (!isInLibrary) {
+        // Auto-add the game to library if it's public
+        autoAddGameToLibrary(
+          gameId,
+          cachedGames.map(g => g.game_id),
+          updatedLibrary => {
+            // The autoAddGameToLibrary function will handle updating localStorage
+            // We need to reload the games to reflect the changes
+            const loadGames = async () => {
+              try {
+                const sessionID = Cookies.get('sessionID');
+                const response = await axios.get('/get-library-games', {
+                  headers: {
+                    sessionID: sessionID,
+                  },
+                });
+                const libraryGames = response.data;
+                setCachedGames(libraryGames);
+              } catch (err) {
+                console.error('Error reloading library after auto-add:', err);
+              }
+            };
+            loadGames();
+          }
+        );
+      }
+    }
+  }, [location.search, cachedGames]);
 
   const handleContextMenu = (event, game) => {
     event.preventDefault();
