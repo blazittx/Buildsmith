@@ -34,7 +34,7 @@ export default async (request, context) => {
     });
   }
 
-  const { game_id, game_name, version, description, background_image_url, status } = gameData;
+  const { game_id, game_name, version, description, background_image_url, status, screenshots } = gameData;
 
   if (!game_id) {
     return new Response(JSON.stringify({ error: 'Game ID is required' }), {
@@ -145,6 +145,7 @@ export default async (request, context) => {
   if (description) updatedFields.description = description;
   if (background_image_url) updatedFields.background_image_url = background_image_url;
   if (typeof status !== 'undefined') updatedFields.status = status;
+  if (screenshots !== undefined) updatedFields.screenshots = screenshots;
 
   if (Object.keys(updatedFields).length === 0) {
     return new Response(JSON.stringify({ error: 'No fields to update' }), {

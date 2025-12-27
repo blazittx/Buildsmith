@@ -16,6 +16,7 @@ import GameCard from '../../GameCard';
 import Cookies from 'js-cookie';
 import { colors } from '../../../theme/colors';
 import ImageUploader from '../../common/ImageUploader';
+import ScreenshotUploader from '../../common/ScreenshotUploader';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -37,6 +38,8 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [screenshots, setScreenshots] = useState(game.screenshots || []);
+  const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
 
   useEffect(() => {
     setGameName(game.game_name);
@@ -44,6 +47,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
     setGameDescription(game.description || '');
     setGameVersion(game.version || '');
     setGameStatus(game.status || 'public');
+    setScreenshots(game.screenshots || []);
   }, [game]);
 
   useEffect(() => {
@@ -51,10 +55,11 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
     const hasDescriptionChanged = gameDescription !== (game.description || '');
     const hasBackgroundChanged = gameBackgroundUrl !== (game.background_image_url || '');
     const hasStatusChanged = gameStatus !== (game.status || 'public');
+    const hasScreenshotsChanged = JSON.stringify(screenshots) !== JSON.stringify(game.screenshots || []);
     setHasChanges(
-      hasNameChanged || hasDescriptionChanged || hasBackgroundChanged || hasStatusChanged
+      hasNameChanged || hasDescriptionChanged || hasBackgroundChanged || hasStatusChanged || hasScreenshotsChanged
     );
-  }, [gameName, gameDescription, gameBackgroundUrl, gameStatus, game]);
+  }, [gameName, gameDescription, gameBackgroundUrl, gameStatus, screenshots, game]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -74,6 +79,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
       status: gameStatus,
       team_name: game.team_name,
       is_manual_upload: false,
+      screenshots: screenshots.length > 0 ? screenshots : undefined,
     };
 
     console.log('📤 Sending game update request:', updatedGame);
@@ -197,6 +203,19 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
                 sessionID: Cookies.get('sessionID'),
                 uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
               }}
+            />
+            
+            {/* Screenshot Uploader */}
+            <ScreenshotUploader
+              screenshots={screenshots}
+              onScreenshotsChange={setScreenshots}
+              uploading={uploadingScreenshots}
+              setUploading={setUploadingScreenshots}
+              headers={{
+                sessionID: Cookies.get('sessionID'),
+                uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
+              }}
+              maxScreenshots={10}
             />
 
             {/* Save Button */}

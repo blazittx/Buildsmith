@@ -8,6 +8,7 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Grid,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -245,6 +246,49 @@ export const GameDetails = ({
         >
           {game.description}
         </Typography>
+
+        {/* Screenshots Gallery */}
+        {game.screenshots && game.screenshots.length > 0 && (
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{
+                color: colors.text,
+                mb: 2,
+                fontWeight: 600,
+              }}
+            >
+              Screenshots
+            </Typography>
+            <Grid container spacing={2}>
+              {game.screenshots.map((screenshot, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Box
+                    component="img"
+                    src={screenshot}
+                    alt={`Screenshot ${index + 1}`}
+                    sx={{
+                      width: '100%',
+                      height: 'auto',
+                      borderRadius: '4px',
+                      border: `1px solid ${colors.border}`,
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                        boxShadow: `0 4px 12px rgba(0, 188, 212, 0.3)`,
+                      },
+                    }}
+                    onClick={() => {
+                      // Open image in new tab/window for full view
+                      window.open(screenshot, '_blank');
+                    }}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
 
         {/* Game Stats */}
         <Paper

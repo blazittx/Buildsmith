@@ -47,6 +47,7 @@ export default async (request, context) => {
     team_icon_url,
     github_repo,
     status,
+    screenshots,
   } = body;
 
   if (!game_name || !game_id || !team_name) {
@@ -81,6 +82,7 @@ export default async (request, context) => {
         team_icon_url,
         github_repo,
         status,
+        screenshots,
         session_id: sessionID,
       }),
     });

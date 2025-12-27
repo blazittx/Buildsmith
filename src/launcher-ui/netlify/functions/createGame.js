@@ -36,6 +36,7 @@ exports.handler = async event => {
     version,
     team_icon_url,
     github_repo,
+    screenshots,
   } = JSON.parse(event.body);
   const API_BASE_URL = process.env.API_BASE_URL;
   const API_KEY = process.env.API_KEY;
@@ -82,6 +83,7 @@ exports.handler = async event => {
         version,
         team_icon_url,
         github_repo,
+        screenshots,
       },
       { headers: { 'x-api-key': API_KEY } }
     );

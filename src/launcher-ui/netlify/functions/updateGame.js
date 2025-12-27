@@ -37,7 +37,7 @@ exports.handler = async event => {
     };
   }
 
-  const { game_id, game_name, version, description, background_image_url } = gameData;
+  const { game_id, game_name, version, description, background_image_url, screenshots } = gameData;
 
   if (!game_id) {
     return {
@@ -51,6 +51,7 @@ exports.handler = async event => {
   if (version) updatedFields.version = version;
   if (description) updatedFields.description = description;
   if (background_image_url) updatedFields.background_image_url = background_image_url;
+  if (screenshots !== undefined) updatedFields.screenshots = screenshots;
 
   if (Object.keys(updatedFields).length === 0) {
     return {

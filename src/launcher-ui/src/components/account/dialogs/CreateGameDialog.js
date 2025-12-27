@@ -22,6 +22,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Cookies from 'js-cookie';
 import { colors } from '../../../theme/colors';
 import ImageUploader from '../../common/ImageUploader';
+import ScreenshotUploader from '../../common/ScreenshotUploader';
 import { getAllInstallationPairs } from '../../../pages/AccountPage';
 import ImageButton from '../../button/ImageButton';
 import BackgroundAnimation from '../../BackgroundAnimation';
@@ -60,6 +61,8 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [gameStatus, setGameStatus] = useState('public');
+  const [screenshots, setScreenshots] = useState([]);
+  const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
 
   useEffect(() => {
     if (teams && teams.length > 0) {
@@ -297,6 +300,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
         github_repo: selectedRepo,
         status: gameStatus,
         is_manual_upload: activeTab === 1,
+        screenshots: screenshots.length > 0 ? screenshots : undefined,
       };
 
       // Attempt to create the game via the Netlify function
@@ -728,6 +732,17 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
                     sessionID: Cookies.get('sessionID'),
                     uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
                   }}
+                />
+                <ScreenshotUploader
+                  screenshots={screenshots}
+                  onScreenshotsChange={setScreenshots}
+                  uploading={uploadingScreenshots}
+                  setUploading={setUploadingScreenshots}
+                  headers={{
+                    sessionID: Cookies.get('sessionID'),
+                    uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
+                  }}
+                  maxScreenshots={10}
                 />
               </Stack>
             </Stack>
