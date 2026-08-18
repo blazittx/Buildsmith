@@ -80,7 +80,7 @@
     "node-fetch": "^3.3.2",
     "oracledb": "^6.4.0",
     "update-electron-app": "^3.0.0",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
