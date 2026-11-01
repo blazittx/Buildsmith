@@ -55,9 +55,14 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
     const hasDescriptionChanged = gameDescription !== (game.description || '');
     const hasBackgroundChanged = gameBackgroundUrl !== (game.background_image_url || '');
     const hasStatusChanged = gameStatus !== (game.status || 'public');
-    const hasScreenshotsChanged = JSON.stringify(screenshots) !== JSON.stringify(game.screenshots || []);
+    const hasScreenshotsChanged =
+      JSON.stringify(screenshots) !== JSON.stringify(game.screenshots || []);
     setHasChanges(
-      hasNameChanged || hasDescriptionChanged || hasBackgroundChanged || hasStatusChanged || hasScreenshotsChanged
+      hasNameChanged ||
+        hasDescriptionChanged ||
+        hasBackgroundChanged ||
+        hasStatusChanged ||
+        hasScreenshotsChanged
     );
   }, [gameName, gameDescription, gameBackgroundUrl, gameStatus, screenshots, game]);
 
@@ -79,7 +84,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
       status: gameStatus,
       team_name: game.team_name,
       is_manual_upload: false,
-      screenshots: screenshots.length > 0 ? screenshots : undefined,
+      screenshots: screenshots,
     };
 
     console.log('📤 Sending game update request:', updatedGame);
@@ -204,7 +209,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
                 uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
               }}
             />
-            
+
             {/* Screenshot Uploader */}
             <ScreenshotUploader
               screenshots={screenshots}
