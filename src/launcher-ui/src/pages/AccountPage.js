@@ -48,7 +48,7 @@ export default function AccountPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const cookieOptions = useMemo(() => ({ expires: 7, secure: true, sameSite: 'Strict' }), []);
+  const cookieOptions = useMemo(() => ({ expires: 30, secure: true, sameSite: 'Strict' }), []);
 
   useEffect(() => {
     const handleSession = async () => {
@@ -90,6 +90,11 @@ export default function AccountPage() {
           setIsLoggedIn(false);
         } else {
           await res.json();
+          Cookies.set('sessionID', sessionID, cookieOptions);
+          const savedUsername = Cookies.get('username');
+          const savedGithubId = Cookies.get('githubID');
+          if (savedUsername) Cookies.set('username', savedUsername, cookieOptions);
+          if (savedGithubId) Cookies.set('githubID', savedGithubId, cookieOptions);
           setIsLoggedIn(true);
         }
       } catch (error) {

@@ -76,6 +76,10 @@ function = "verify-session"
 path = "/verify-session"
 
 [[edge_functions]]
+function = "delete-session"
+path = "/delete-session"
+
+[[edge_functions]]
 function = "get-all-games"
 path = "/get-all-games"
 
