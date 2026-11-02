@@ -22,6 +22,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadGame: gameId => ipcRenderer.send('download-game', gameId),
   getPathForFile: file => webUtils.getPathForFile(file),
   publishGameBuild: payload => ipcRenderer.invoke('publish-game-build', payload),
+  getSteamSettings: gameId => ipcRenderer.invoke('get-steam-settings', gameId),
+  saveSteamSettings: (gameId, settings) => ipcRenderer.invoke('save-steam-settings', gameId, settings),
+  steamUploadBuild: payload => ipcRenderer.invoke('steam-upload-build', payload),
+  onSteamUploadProgress: callback => {
+    const listener = (event, progress) => callback(progress);
+    ipcRenderer.on('steam-upload-progress', listener);
+    return () => ipcRenderer.removeListener('steam-upload-progress', listener);
+  },
   openGame: gameId => ipcRenderer.send('open-game', gameId),
   stopGame: gameId => ipcRenderer.send('stop-game', gameId),
   isGameRunning: gameId => ipcRenderer.invoke('is-game-running', gameId),

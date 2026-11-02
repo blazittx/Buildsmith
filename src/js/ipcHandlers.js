@@ -10,6 +10,7 @@ const { dialog } = require('electron');
 const updater = require('./updater');
 const { downloadGame } = require('./downloadManager');
 const { publishZip } = require('./publishBuild');
+const { loadSteamSettings, saveSteamSettings, uploadCurrentBuild } = require('./steamPipe');
 const {
   getInstalledGames,
   showContextMenu,
@@ -591,6 +592,23 @@ function initIPCHandlers() {
       console.error('Error deleting file:', error);
       throw error;
     }
+  });
+
+  ipcMain.handle('get-steam-settings', async (event, gameId) => loadSteamSettings(gameId));
+  ipcMain.handle('save-steam-settings', async (event, gameId, settings) => saveSteamSettings(gameId, settings));
+  ipcMain.handle('steam-upload-build', async (event, payload) => {
+    let origin = 'https://buildsmith.app';
+    try {
+      const raw = event.sender.getURL?.() || '';
+      if (raw.startsWith('http')) origin = new URL(raw).origin;
+    } catch (error) {
+      console.warn('Could not read launcher origin', error);
+    }
+    return uploadCurrentBuild({
+      ...payload,
+      origin,
+      onProgress: progress => event.sender.send('steam-upload-progress', progress),
+    });
   });
 
   // Steam App ID file creation

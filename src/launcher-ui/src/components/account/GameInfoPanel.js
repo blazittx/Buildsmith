@@ -29,6 +29,7 @@ import { uploadToCdn } from '../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../utils/notify';
 import { patchStatusLabel, publishPatch } from '../../utils/publishPatch';
 import ConfirmDialog from '../common/ConfirmDialog';
+import SteamUploadTab from './SteamUploadTab';
 
 const GameInfoPanel = ({ game }) => {
   const [workflows, setWorkflows] = useState([]);
@@ -513,6 +514,8 @@ const GameInfoPanel = ({ game }) => {
       <Tabs
         value={activeTab}
         onChange={(e, newValue) => setActiveTab(newValue)}
+        variant="scrollable"
+        scrollButtons="auto"
         sx={{
           marginBottom: 1,
           borderBottom: `1px solid ${colors.border}`,
@@ -534,6 +537,16 @@ const GameInfoPanel = ({ game }) => {
         <Tab
           value="manualUpload"
           label="Manual Upload"
+          sx={{
+            color: colors.text,
+            '&.Mui-selected': {
+              color: colors.primary,
+            },
+          }}
+        />
+        <Tab
+          value="steam"
+          label="Steam"
           sx={{
             color: colors.text,
             '&.Mui-selected': {
@@ -733,6 +746,8 @@ const GameInfoPanel = ({ game }) => {
           </Stack>
         </Stack>
       )}
+
+      {activeTab === 'steam' && <SteamUploadTab game={game} />}
 
       {/* githubApp Info Tab */}
       {activeTab === 'githubApp' && (

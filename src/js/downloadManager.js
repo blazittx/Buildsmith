@@ -53,9 +53,9 @@ function launcherOrigin() {
   return 'https://buildsmith.app';
 }
 
-async function presignMany(keys, sessionId) {
+async function presignMany(keys, sessionId, origin = launcherOrigin()) {
   if (!keys.length) return new Map();
-  const res = await fetch(`${launcherOrigin()}/.netlify/functions/generateDownloadUrl`, {
+  const res = await fetch(`${origin}/.netlify/functions/generateDownloadUrl`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -213,4 +213,32 @@ async function downloadGame(event, gameId) {
   }
 }
 
-module.exports = { downloadGame, extractZip };
+async function materializeBuild({ gameId, version, dest, sessionId, origin, onProgress }) {
+  if (!version) throw new Error('This game has no published build yet.');
+  const manifestKey = `R2/${gameId}/manifests/StandaloneWindows64/${version}.json`;
+  const manifestUrl = (await presignMany([manifestKey], sessionId, origin)).get(manifestKey);
+  if (!manifestUrl) throw new Error(`No published build for v${version}`);
+  const targetManifest = JSON.parse((await downloadUrl(manifestUrl)).toString('utf8'));
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.mkdirSync(dest, { recursive: true });
+  const chunkUrls = await presignMany(
+    missingChunks(null, targetManifest).map(sha => `R2/${gameId}/chunks/${sha}`),
+    sessionId,
+    origin
+  );
+  await applyManifest({
+    installDir: dest,
+    localManifest: null,
+    targetManifest,
+    onProgress,
+    fetchChunk: async sha => {
+      const url = chunkUrls.get(`R2/${gameId}/chunks/${sha}`);
+      if (!url) throw new Error(`Missing chunk ${sha}`);
+      return downloadUrl(url);
+    },
+  });
+  fs.rmSync(path.join(dest, '.buildsmith-manifest.json'), { force: true });
+  return dest;
+}
+
+module.exports = { downloadGame, extractZip, materializeBuild };
