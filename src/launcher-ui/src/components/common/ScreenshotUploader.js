@@ -2,7 +2,11 @@ import React, { useRef, useState } from 'react';
 import { CircularProgress, Stack, Box, IconButton, Typography } from '@mui/material';
 import UploadIcon from '@mui/icons-material/Upload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { colors } from '../../theme/colors';
+import { uploadToCdn } from '../../utils/cdnUpload';
+import { notify, uploadErrorMessage } from '../../utils/notify';
 
 const ScreenshotUploader = ({
   screenshots = [],
@@ -18,13 +22,8 @@ const ScreenshotUploader = ({
   const fileInputRef = useRef();
 
   const handleFileUpload = async (file, index = null) => {
-    if (screenshots.length >= maxScreenshots) {
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Limit Reached',
-          `You can only upload up to ${maxScreenshots} screenshots.`
-        );
-      }
+    if (index === null && screenshots.length >= maxScreenshots) {
+      notify('Upload Limit Reached', `You can only upload up to ${maxScreenshots} screenshots.`);
       return;
     }
 
@@ -34,44 +33,8 @@ const ScreenshotUploader = ({
     }
 
     try {
-      const sessionID =
-        headers.sessionID ||
-        (window.Cookies && window.Cookies.get && window.Cookies.get('sessionID'));
-      const fetchHeaders = {
-        'Content-Type': 'application/json',
-        ...(sessionID ? { sessionID } : {}),
-      };
-      const uploadUrl = headers.uploadUrl || 'https://cdn.diabolical.services/generateUploadUrl';
+      const { publicUrl: imageUrl } = await uploadToCdn(file, { sessionID: headers.sessionID });
 
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: fetchHeaders,
-        body: JSON.stringify({
-          fileExt: file.name.split('.').pop(),
-          contentType: file.type,
-          size_bytes: file.size,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to generate upload URL');
-      }
-
-      const { url, key } = await res.json();
-
-      const uploadRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      const imageUrl = `https://cdn.diabolical.services/${key}`;
-      
       if (index !== null) {
         // Replace screenshot at index
         const newScreenshots = [...screenshots];
@@ -82,19 +45,10 @@ const ScreenshotUploader = ({
         onScreenshotsChange([...screenshots, imageUrl]);
       }
 
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification('Upload Complete', 'Screenshot uploaded successfully.');
-      }
+      notify('Upload Complete', 'Screenshot uploaded successfully.');
     } catch (err) {
-      console.error('❌ Upload failed:', err);
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Failed',
-          err.message === 'Quota check failed'
-            ? 'You have exceeded your storage quota. Please upgrade your plan or delete some files.'
-            : err.message || 'Could not upload your screenshot.'
-        );
-      }
+      console.error('Upload failed:', err);
+      notify('Upload Failed', uploadErrorMessage(err, 'Could not upload your screenshot.'));
     } finally {
       setUploading(false);
       setUploadingIndex(null);
@@ -119,12 +73,7 @@ const ScreenshotUploader = ({
     if (files.length === 0) return;
     
     if (screenshots.length + files.length > maxScreenshots) {
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Limit',
-          `You can only upload up to ${maxScreenshots} screenshots total.`
-        );
-      }
+      notify('Upload Limit', `You can only upload up to ${maxScreenshots} screenshots total.`);
       return;
     }
 
@@ -142,12 +91,7 @@ const ScreenshotUploader = ({
     if (files.length === 0) return;
     
     if (screenshots.length + files.length > maxScreenshots) {
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Limit',
-          `You can only upload up to ${maxScreenshots} screenshots total.`
-        );
-      }
+      notify('Upload Limit', `You can only upload up to ${maxScreenshots} screenshots total.`);
       return;
     }
 
@@ -162,9 +106,16 @@ const ScreenshotUploader = ({
     e.target.value = '';
   };
 
-  const handleDelete = (index) => {
-    const newScreenshots = screenshots.filter((_, i) => i !== index);
-    onScreenshotsChange(newScreenshots);
+  const handleDelete = index => {
+    onScreenshotsChange(screenshots.filter((_, i) => i !== index));
+  };
+
+  const moveScreenshot = (index, direction) => {
+    const next = index + direction;
+    if (next < 0 || next >= screenshots.length) return;
+    const updated = [...screenshots];
+    [updated[index], updated[next]] = [updated[next], updated[index]];
+    onScreenshotsChange(updated);
   };
 
   const handleReplace = (index, file) => {
@@ -179,11 +130,14 @@ const ScreenshotUploader = ({
       
       {/* Existing Screenshots Grid */}
       {screenshots.length > 0 && (
+        <Box sx={{ containerType: 'inline-size' }}>
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gridTemplateColumns: '1fr 1fr',
             gap: 2,
+            maxHeight: 'calc((100cqw - 16px) * 9 / 16 + 16px)',
+            overflowY: 'auto',
           }}
         >
           {screenshots.map((screenshot, index) => (
@@ -258,8 +212,40 @@ const ScreenshotUploader = ({
                   <DeleteIcon sx={{ fontSize: 16 }} />
                 </IconButton>
               </Box>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  display: 'flex',
+                  gap: 0.5,
+                  p: 0.5,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <IconButton
+                  size="small"
+                  aria-label="Move screenshot earlier"
+                  onClick={() => moveScreenshot(index, -1)}
+                  disabled={uploading || index === 0}
+                  sx={{ color: colors.text, padding: '4px' }}
+                >
+                  <ArrowBackIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  aria-label="Move screenshot later"
+                  onClick={() => moveScreenshot(index, 1)}
+                  disabled={uploading || index === screenshots.length - 1}
+                  sx={{ color: colors.text, padding: '4px' }}
+                >
+                  <ArrowForwardIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
             </Box>
           ))}
+        </Box>
         </Box>
       )}
 

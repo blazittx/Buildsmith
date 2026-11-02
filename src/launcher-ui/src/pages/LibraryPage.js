@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Grid, TextField } from '@mui/material';
 import axios from 'axios';
 import { colors } from '../theme/colors';
@@ -18,6 +18,10 @@ const LibraryPage = () => {
   const [installedGameIds, setInstalledGameIds] = useState([]);
   const [cachedGames, setCachedGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
+  const cachedGamesRef = useRef(cachedGames);
+  const selectedGameRef = useRef(selectedGame);
+  cachedGamesRef.current = cachedGames;
+  selectedGameRef.current = selectedGame;
   const [activeDownloads, setActiveDownloads] = useState({});
   const [hasUpdate, setHasUpdate] = useState(false);
   const [applyingUpdate, setApplyingUpdate] = useState({});
@@ -125,15 +129,15 @@ const LibraryPage = () => {
 
         // Update selectedGame to the latest object from cachedGames
         setSelectedGame(prev => {
-          const updated = cachedGames.find(g => g.game_id === gameId);
+          const updated = cachedGamesRef.current.find(g => g.game_id === gameId);
           return updated || prev;
         });
 
         // Update version and update status
         const currentVersion = await window.electronAPI.getCurrentGameVersion(gameId);
-        const gameInfo = cachedGames.find(g => g.game_id === gameId);
+        const gameInfo = cachedGamesRef.current.find(g => g.game_id === gameId);
 
-        if (gameId === selectedGame?.game_id) {
+        if (gameId === selectedGameRef.current?.game_id) {
           setCurrentVersion(currentVersion);
           setHasUpdate(gameInfo && currentVersion !== gameInfo.version);
         }
@@ -156,13 +160,14 @@ const LibraryPage = () => {
       }
     };
 
-    window.electronAPI?.onDownloadProgress(handleDownloadProgress);
-    window.electronAPI?.onDownloadComplete(handleDownloadComplete);
+    const unsubscribeProgress = window.electronAPI?.onDownloadProgress(handleDownloadProgress);
+    const unsubscribeComplete = window.electronAPI?.onDownloadComplete(handleDownloadComplete);
 
     return () => {
-      window.electronAPI?.removeDownloadProgressListener(handleDownloadProgress);
+      unsubscribeProgress?.();
+      unsubscribeComplete?.();
     };
-  }, [selectedGame, fetchLocalVersion, cachedGames]);
+  }, []);
 
   useEffect(() => {
     const loadGames = async () => {

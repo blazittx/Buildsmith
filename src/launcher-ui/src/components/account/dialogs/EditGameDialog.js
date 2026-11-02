@@ -9,6 +9,8 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SaveIcon from '@mui/icons-material/Save';
@@ -20,7 +22,7 @@ import ScreenshotUploader from '../../common/ScreenshotUploader';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
-    maxHeight: 'none',
+    maxHeight: 'calc(100% - 48px)',
     minWidth: '800px',
     background: colors.background,
     boxShadow: 'none',
@@ -40,6 +42,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
   const [uploading, setUploading] = useState(false);
   const [screenshots, setScreenshots] = useState(game.screenshots || []);
   const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     setGameName(game.game_name);
@@ -48,6 +51,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
     setGameVersion(game.version || '');
     setGameStatus(game.status || 'public');
     setScreenshots(game.screenshots || []);
+    setActiveTab(0);
   }, [game]);
 
   useEffect(() => {
@@ -137,7 +141,12 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
   return (
     <StyledDialog open={open} onClose={handleClose} aria-labelledby="edit-game-dialog-title">
       <DialogContent
-        style={{ padding: '24px', width: '100%', border: '1px solid' + colors.border }}
+        style={{
+          padding: '24px',
+          width: '100%',
+          border: '1px solid' + colors.border,
+          overflowY: 'auto',
+        }}
       >
         <Stack display={'flex'} flexDirection={'row'} gap={'24px'}>
           <Stack spacing={2} alignItems="center">
@@ -168,7 +177,26 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
               gap: '24px',
             }}
           >
-            {/* Status Dropdown */}
+            <Tabs
+              value={activeTab}
+              onChange={(_, value) => setActiveTab(value)}
+              sx={{
+                borderBottom: 1,
+                borderColor: 'divider',
+                minHeight: 40,
+                '& .MuiTab-root': {
+                  color: colors.text,
+                  minHeight: 40,
+                  '&.Mui-selected': { color: colors.primary },
+                },
+              }}
+            >
+              <Tab label="Details" />
+              <Tab label="Screenshots" />
+            </Tabs>
+
+            {activeTab === 0 && (
+            <>
             <FormControl fullWidth>
               <InputLabel id="game-status-label">Game Status</InputLabel>
               <Select
@@ -209,8 +237,10 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
                 uploadUrl: 'https://cdn.diabolical.services/generateUploadUrl',
               }}
             />
+            </>
+            )}
 
-            {/* Screenshot Uploader */}
+            {activeTab === 1 && (
             <ScreenshotUploader
               screenshots={screenshots}
               onScreenshotsChange={setScreenshots}
@@ -222,6 +252,7 @@ const EditGameDialog = ({ open, handleClose, game, onSave }) => {
               }}
               maxScreenshots={10}
             />
+            )}
 
             {/* Save Button */}
             <Button

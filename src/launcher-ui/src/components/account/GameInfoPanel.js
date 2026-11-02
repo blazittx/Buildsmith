@@ -24,6 +24,8 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../../theme/colors';
 import Cookies from 'js-cookie';
+import { uploadToCdn } from '../../utils/cdnUpload';
+import { notify, uploadErrorMessage } from '../../utils/notify';
 import ConfirmDialog from '../common/ConfirmDialog';
 
 const GameInfoPanel = ({ game }) => {
@@ -268,45 +270,15 @@ const GameInfoPanel = ({ game }) => {
     setUploadProgress(0);
 
     try {
-      // Use the new CDN upload system
       const sessionID = Cookies.get('sessionID');
-      const res = await fetch('https://cdn.diabolical.services/generateUploadUrl', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(sessionID ? { sessionID } : {}),
-        },
-        body: JSON.stringify({
-          fileExt: gameFile.name.split('.').pop(),
-          contentType: gameFile.type,
+      await uploadToCdn(gameFile, {
+        sessionID,
+        onProgress: setUploadProgress,
+        fields: {
           isGameUpload: true,
           gameId: game.game_id.trim(),
           version: manualVersion,
-          size_bytes: gameFile.size,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to generate upload URL');
-      }
-
-      const { url } = await res.json();
-
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener('progress', event => {
-        if (event.lengthComputable) {
-          const progress = (event.loaded / event.total) * 100;
-          setUploadProgress(progress);
-        }
-      });
-
-      await new Promise((resolve, reject) => {
-        xhr.onload = resolve;
-        xhr.onerror = reject;
-        xhr.open('PUT', url);
-        xhr.setRequestHeader('Content-Type', gameFile.type);
-        xhr.send(gameFile);
+        },
       });
 
       // After successful upload, update the game version in the database
@@ -332,22 +304,10 @@ const GameInfoPanel = ({ game }) => {
         throw new Error(errorData.error || 'Failed to update game version');
       }
 
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Successful',
-          'Your game build has been uploaded and version updated successfully.'
-        );
-      }
+      notify('Upload Successful', 'Your game build has been uploaded and version updated successfully.');
     } catch (err) {
-      console.error('❌ Upload failed:', err);
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Failed',
-          err.message === 'Quota check failed'
-            ? 'You have exceeded your storage quota. Please upgrade your plan or delete some files.'
-            : err.message || 'Could not upload your game file.'
-        );
-      }
+      console.error('Upload failed:', err);
+      notify('Upload Failed', uploadErrorMessage(err, 'Could not upload your game file.'));
       // Reset the upload state
       setGameFile(null);
       setGameFileName('');

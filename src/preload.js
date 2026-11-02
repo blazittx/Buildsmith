@@ -43,22 +43,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentGameVersion: gameId => ipcRenderer.invoke('get-current-game-version', gameId),
   getLatestGameVersion: gameId => ipcRenderer.invoke('get-latest-game-version', gameId),
   onDownloadProgress: callback => {
-    ipcRenderer.on('download-progress', (event, { gameId, percentage }) => {
+    const listener = (event, { gameId, percentage }) => {
       callback({ gameId, percentage });
-    });
-  },
-  removeDownloadProgressListener: callback => {
-    ipcRenderer.removeListener('download-progress', callback);
+    };
+    ipcRenderer.on('download-progress', listener);
+    return () => ipcRenderer.removeListener('download-progress', listener);
   },
   onDownloadComplete: callback => {
-    ipcRenderer.on('download-complete', (event, gameId, installPath) => {
+    const listener = (event, gameId, installPath) => {
       callback({ gameId, installPath });
-    });
+    };
+    ipcRenderer.on('download-complete', listener);
+    return () => ipcRenderer.removeListener('download-complete', listener);
   },
   onGameUninstalled: callback => {
-    ipcRenderer.on('game-uninstalled', (event, gameId) => {
-      callback(gameId);
-    });
+    const listener = (event, gameId) => callback(gameId);
+    ipcRenderer.on('game-uninstalled', listener);
+    return () => ipcRenderer.removeListener('game-uninstalled', listener);
   },
   showContextMenu: (gameId, position) => {
     ipcRenderer.send('show-context-menu', gameId, position);

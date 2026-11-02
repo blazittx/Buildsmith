@@ -49,15 +49,16 @@ const GameCard = ({
       }
     };
 
-    if (window.api) {
-      window.electronAPI.onDownloadProgress(handleDownloadProgress);
-      window.electronAPI.onDownloadComplete(handleDownloadComplete);
-      window.electronAPI.onGameUninstalled(handleGameUninstalled);
-    } else {
-      console.log('window.api is not available (running in the browser)');
-    }
+    const unsubscribeProgress = window.electronAPI?.onDownloadProgress(handleDownloadProgress);
+    const unsubscribeComplete = window.electronAPI?.onDownloadComplete(handleDownloadComplete);
+    const unsubscribeUninstall = window.electronAPI?.onGameUninstalled?.(handleGameUninstalled);
 
-    fetchLocalVersion(); // Fetch version when component mounts
+    fetchLocalVersion();
+    return () => {
+      unsubscribeProgress?.();
+      unsubscribeComplete?.();
+      unsubscribeUninstall?.();
+    };
   }, [game.game_id]);
 
   const handleDownload = async () => {

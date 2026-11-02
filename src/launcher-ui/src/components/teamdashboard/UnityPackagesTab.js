@@ -2,8 +2,10 @@ import React from 'react';
 import { Box, Tabs, Tab } from '@mui/material';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import UnityPackageUpload from './UnityPackageUpload';
 import UnityPackageDownload from './UnityPackageDownload';
+import UnityPackageManage from './UnityPackageManage';
 
 const UnityPackagesTab = ({
   unityTab,
@@ -17,6 +19,8 @@ const UnityPackagesTab = ({
   downloadingPackages,
   onUpload,
   onDownload,
+  deletingPackages,
+  onDelete,
 }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden' }}>
@@ -56,8 +60,14 @@ const UnityPackagesTab = ({
           iconPosition="start"
           sx={{ minHeight: 32, height: 32, padding: '0 12px', fontSize: 13 }}
         />
+        <Tab
+          label="Manage"
+          icon={<DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />}
+          iconPosition="start"
+          sx={{ minHeight: 32, height: 32, padding: '0 12px', fontSize: 13 }}
+        />
       </Tabs>
-      {unityTab === 0 ? (
+      {unityTab === 0 && (
         <UnityPackageUpload
           unityPackages={unityPackages}
           scanning={scanning}
@@ -66,12 +76,21 @@ const UnityPackagesTab = ({
           cdnPackages={cdnPackages}
           onUpload={onUpload}
         />
-      ) : (
+      )}
+      {unityTab === 1 && (
         <UnityPackageDownload
           cdnPackages={cdnPackages}
           loadingCdn={loadingCdn}
           downloadingPackages={downloadingPackages}
           onDownload={onDownload}
+        />
+      )}
+      {unityTab === 2 && (
+        <UnityPackageManage
+          cdnPackages={cdnPackages}
+          loadingCdn={loadingCdn}
+          deletingPackages={deletingPackages}
+          onDelete={onDelete}
         />
       )}
     </Box>

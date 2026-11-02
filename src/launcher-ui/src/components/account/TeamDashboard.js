@@ -26,6 +26,7 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
     return saved ? JSON.parse(saved) : [];
   });
   const [downloadingPackages, setDownloadingPackages] = useState(new Set());
+  const [deletingPackages, setDeletingPackages] = useState(new Set());
 
   // Get current tab from URL
   const getCurrentTab = () => {
@@ -34,7 +35,7 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
     const unityTab = searchParams.get('unityTab');
     return {
       mainTab: tab === 'packages' ? 1 : 0,
-      unityTab: unityTab === 'download' ? 1 : 0,
+      unityTab: unityTab === 'download' ? 1 : unityTab === 'manage' ? 2 : 0,
     };
   };
 
@@ -49,7 +50,7 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
 
   const handleUnityTabChange = (_, newValue) => {
     const searchParams = new URLSearchParams(location.search);
-    searchParams.set('unityTab', newValue === 1 ? 'download' : 'upload');
+    searchParams.set('unityTab', ['upload', 'download', 'manage'][newValue] || 'upload');
     navigate(`${location.pathname}?${searchParams.toString()}`, { replace: true });
   };
 
@@ -325,6 +326,44 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
     }
   };
 
+  const handleDelete = async pkg => {
+    const packageId = pkg.package_id;
+    const sessionID = document.cookie.match(/sessionID=([^;]+)/)?.[1];
+    if (!packageId || !sessionID) return;
+
+    setDeletingPackages(prev => new Set([...prev, packageId]));
+    try {
+      const res = await fetch('/delete-package', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          package_id: packageId,
+          team_id: team.team_id,
+          session_id: sessionID,
+        }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete package');
+      }
+
+      setUploadedPackages(prev =>
+        prev.filter(path => !path.replace(/\\/g, '/').endsWith(`${packageId}.unitypackage`))
+      );
+      setCdnPackages(prev => prev.filter(item => item.package_id !== packageId));
+      window.electronAPI?.showCustomNotification('Package Deleted', `${packageId} was removed.`);
+    } catch (err) {
+      console.error('Delete failed:', err);
+      window.electronAPI?.showCustomNotification('Delete Failed', err.message || 'Could not delete the package.');
+    } finally {
+      setDeletingPackages(prev => {
+        const next = new Set(prev);
+        next.delete(packageId);
+        return next;
+      });
+    }
+  };
+
   if (!team) return null;
 
   return (
@@ -403,6 +442,8 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
             downloadingPackages={downloadingPackages}
             onUpload={handleUpload}
             onDownload={handleDownload}
+            deletingPackages={deletingPackages}
+            onDelete={handleDelete}
           />
         )}
       </Box>

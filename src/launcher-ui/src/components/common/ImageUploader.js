@@ -2,6 +2,8 @@ import React, { useRef, useState } from 'react';
 import { CircularProgress, Stack } from '@mui/material';
 import UploadIcon from '@mui/icons-material/Upload';
 import { colors } from '../../theme/colors';
+import { uploadToCdn } from '../../utils/cdnUpload';
+import { notify, uploadErrorMessage } from '../../utils/notify';
 
 const ImageUploader = ({
   onUpload,
@@ -18,58 +20,12 @@ const ImageUploader = ({
     setUploading(true);
 
     try {
-      const sessionID =
-        headers.sessionID ||
-        (window.Cookies && window.Cookies.get && window.Cookies.get('sessionID'));
-      const fetchHeaders = {
-        'Content-Type': 'application/json',
-        ...(sessionID ? { sessionID } : {}),
-      };
-      const uploadUrl = headers.uploadUrl || 'https://cdn.diabolical.services/generateUploadUrl';
-
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: fetchHeaders,
-        body: JSON.stringify({
-          fileExt: file.name.split('.').pop(),
-          contentType: file.type,
-          size_bytes: file.size,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to generate upload URL');
-      }
-
-      const { url, key } = await res.json();
-
-      const uploadRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      const imageUrl = `https://cdn.diabolical.services/${key}`;
-      onUpload(imageUrl);
-
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification('Upload Complete', 'Your image was uploaded.');
-      }
+      const { publicUrl } = await uploadToCdn(file, { sessionID: headers.sessionID });
+      onUpload(publicUrl);
+      notify('Upload Complete', 'Your image was uploaded.');
     } catch (err) {
-      console.error('❌ Upload failed:', err);
-      if (window.electronAPI) {
-        window.electronAPI.showCustomNotification(
-          'Upload Failed',
-          err.message === 'Quota check failed'
-            ? 'You have exceeded your storage quota. Please upgrade your plan or delete some files.'
-            : err.message || 'Could not upload your image.'
-        );
-      }
+      console.error('Upload failed:', err);
+      notify('Upload Failed', uploadErrorMessage(err, 'Could not upload your image.'));
       // Reset the upload state by calling onUpload with null
       onUpload(null);
     } finally {
