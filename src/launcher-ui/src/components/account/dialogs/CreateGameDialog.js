@@ -9,7 +9,7 @@ import { colors } from '../../../theme/colors';
 import { getAllInstallationPairs } from '../../../pages/AccountPage';
 import { uploadToCdn } from '../../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../../utils/notify';
-import { patchStatusLabel, publishPatch } from '../../../utils/publishPatch';
+import { publishPatch } from '../../../utils/publishPatch';
 import {
   STEPS,
   StyledDialog,
