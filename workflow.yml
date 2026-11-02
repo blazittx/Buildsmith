@@ -179,6 +179,22 @@ jobs:
           echo "Upload successful"
           echo "::endgroup::"
 
+      - name: Publish patch chunks
+        env:
+          API_KEY: ${{ secrets.DIABOLICAL_API_KEY }}
+          API_URL: ${{ secrets.DIABOLICAL_API_URL }}
+          GAME_ID: ${{ secrets.DIABOLICAL_GAME_ID }}
+        run: |
+          if [ -f scripts/publish-build.js ]; then
+            node scripts/publish-build.js \
+              --dir "./build/${{ matrix.targetPlatform }}" \
+              --game "$GAME_ID" \
+              --version "${{ env.NEW_VERSION }}" \
+              --api "$API_URL"
+          else
+            echo "No patch publisher in this checkout. Players will download the full zip."
+          fi
+
       - name: Update Game Version in API
         if: success()
         run: |

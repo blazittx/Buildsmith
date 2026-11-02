@@ -103,7 +103,7 @@ const LibraryPage = () => {
         ...prev,
         [progressData.gameId]: {
           percent,
-          percentageString: `${percent}%`,
+          percentageString: progressData.sizeLabel || `${percent}%`,
           time: Date.now(),
         },
       }));

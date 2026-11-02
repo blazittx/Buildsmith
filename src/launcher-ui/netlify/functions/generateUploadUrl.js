@@ -22,6 +22,7 @@ exports.handler = async function (event, context) {
       gameId,
       isGameUpload,
       version,
+      files,
     } = body;
 
     // Get R2 credentials from environment variables
@@ -46,6 +47,32 @@ exports.handler = async function (event, context) {
       },
     });
 
+    const sign = (key, type) =>
+      getSignedUrl(
+        s3,
+        new PutObjectCommand({
+          Bucket: 'diabolicallauncher',
+          Key: key,
+          ContentType: type,
+          CacheControl: 'no-cache',
+        }),
+        { expiresIn: Array.isArray(files) ? 3600 : 60 }
+      );
+
+    if (Array.isArray(files)) {
+      const urls = [];
+      for (const file of files) {
+        const key = file.overwriteKey;
+        if (!key || key.includes('..')) throw new Error('Invalid upload key');
+        urls.push({ url: await sign(key, file.contentType || 'application/octet-stream'), key });
+      }
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ urls }),
+        headers: { 'Content-Type': 'application/json' },
+      };
+    }
+
     // Generate key based on whether it's a game upload or not
     let key;
     if (isGameUpload && gameId) {
@@ -54,16 +81,7 @@ exports.handler = async function (event, context) {
       key = overwriteKey || `user-uploads/${uuidv4()}.${fileExt}`;
     }
 
-    // Create the command for presigned URL
-    const command = new PutObjectCommand({
-      Bucket: 'diabolicallauncher',
-      Key: key,
-      ContentType: contentType,
-      CacheControl: 'no-cache',
-    });
-
-    // Generate the presigned URL
-    const url = await getSignedUrl(s3, command, { expiresIn: 60 });
+    const url = await sign(key, contentType);
 
     return {
       statusCode: 200,

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   onDbStatusChange: callback => {
@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('versions', {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Game Actions
   downloadGame: gameId => ipcRenderer.send('download-game', gameId),
+  getPathForFile: file => webUtils.getPathForFile(file),
+  publishGameBuild: payload => ipcRenderer.invoke('publish-game-build', payload),
   openGame: gameId => ipcRenderer.send('open-game', gameId),
   stopGame: gameId => ipcRenderer.send('stop-game', gameId),
   isGameRunning: gameId => ipcRenderer.invoke('is-game-running', gameId),
@@ -42,10 +44,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getInstalledGames: () => ipcRenderer.invoke('get-installed-games'),
   getCurrentGameVersion: gameId => ipcRenderer.invoke('get-current-game-version', gameId),
   getLatestGameVersion: gameId => ipcRenderer.invoke('get-latest-game-version', gameId),
+  onPatchUploadProgress: callback => {
+    const listener = (event, progress) => callback(progress);
+    ipcRenderer.on('patch-upload-progress', listener);
+    return () => ipcRenderer.removeListener('patch-upload-progress', listener);
+  },
   onDownloadProgress: callback => {
-    const listener = (event, { gameId, percentage }) => {
-      callback({ gameId, percentage });
-    };
+    const listener = (event, progress) => callback(progress);
     ipcRenderer.on('download-progress', listener);
     return () => ipcRenderer.removeListener('download-progress', listener);
   },

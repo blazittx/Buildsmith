@@ -105,9 +105,7 @@ export const GameDetails = ({
     buttonOnClick = () => {};
     buttonDisabled = true;
   } else if (downloadProgress) {
-    buttonText = updateStep
-      ? `${updateStep} ${downloadProgress.percentageString || ''}`.trim()
-      : `Downloading ${downloadProgress.percentageString}`;
+    buttonText = updateStep || 'Downloading';
     buttonIcon = DownloadIcon;
     buttonOnClick = onDownload;
     buttonDisabled = true;
@@ -230,6 +228,9 @@ export const GameDetails = ({
                 },
               }}
             />
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              {downloadProgress.percentageString}
+            </Typography>
           </Box>
         )}
       </Box>

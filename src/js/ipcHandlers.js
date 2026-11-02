@@ -9,6 +9,7 @@ const { dialog } = require('electron');
 
 const updater = require('./updater');
 const { downloadGame } = require('./downloadManager');
+const { publishZip } = require('./publishBuild');
 const {
   getInstalledGames,
   showContextMenu,
@@ -55,6 +56,52 @@ function initIPCHandlers() {
 
   // Game Actions
   ipcMain.on('download-game', downloadGame);
+  ipcMain.handle('publish-game-build', async (event, { zipPath, gameId, version, sessionId }) => {
+    let origin = 'https://buildsmith.app';
+    try {
+      const raw = event.sender.getURL?.() || '';
+      if (raw.startsWith('http')) origin = new URL(raw).origin;
+    } catch (error) {
+      console.warn('Could not read launcher origin', error);
+    }
+    const published = await publishZip({
+      zipPath,
+      gameId,
+      version,
+      sessionId,
+      uploadUrl: `${origin}/.netlify/functions/generateUploadUrl`,
+      onProgress: progress => event.sender.send('patch-upload-progress', { gameId, ...progress }),
+    });
+    const response = await fetch(`${origin}/register-build`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        game_id: gameId,
+        version,
+        platform: published.platform,
+        manifest_key: published.manifestKey,
+        total_bytes: published.totalBytes,
+        chunk_count: published.chunkCount,
+        session_id: sessionId,
+      }),
+    });
+    const raw = await response.text();
+    if (!response.ok) {
+      let message = raw;
+      try {
+        message = JSON.parse(raw).error || raw;
+      } catch (error) {
+        message = raw;
+      }
+      // The live API does not have the builds route yet. The manifest in R2 is enough to patch.
+      if (response.status === 404 || String(message).includes('Cannot POST')) {
+        console.warn('Build record was not saved. Patching will use the manifest in R2.', message);
+        return published;
+      }
+      throw new Error(message || 'Failed to register build');
+    }
+    return published;
+  });
   ipcMain.handle('get-installed-games', async () => getInstalledGames());
   ipcMain.handle('get-current-game-version', async (event, gameId) =>
     getCurrentGameVersion(gameId)

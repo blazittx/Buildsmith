@@ -9,6 +9,7 @@ import { colors } from '../../../theme/colors';
 import { getAllInstallationPairs } from '../../../pages/AccountPage';
 import { uploadToCdn } from '../../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../../utils/notify';
+import { patchStatusLabel, publishPatch } from '../../../utils/publishPatch';
 import {
   STEPS,
   StyledDialog,
@@ -44,6 +45,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
   const [gameFileName, setGameFileName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [patchProgress, setPatchProgress] = useState(null);
   const [gameStatus, setGameStatus] = useState('public');
   const [screenshots, setScreenshots] = useState([]);
   const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
@@ -284,6 +286,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
       if (activeTab === 1 && gameFile) {
         setIsUploading(true);
         setUploadProgress(0);
+        setPatchProgress(null);
         try {
           await uploadToCdn(gameFile, {
             sessionID,
@@ -294,6 +297,16 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
               version: gameVersion,
             },
           });
+          try {
+            await publishPatch(gameFile, {
+              gameId: gameId.trim(),
+              version: gameVersion,
+              sessionId: sessionID,
+              onProgress: setPatchProgress,
+            });
+          } catch (err) {
+            notify('Patch index failed', err.message || 'The full build uploaded, but the patch was not published.');
+          }
         } catch (err) {
           console.error('Upload failed:', err);
           notify('Upload Failed', uploadErrorMessage(err, 'Could not upload your game file.'));
@@ -302,11 +315,13 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
           setGameFileName('');
           setGameVersion('0.0.1');
           setUploadProgress(0);
+          setPatchProgress(null);
           setIsSaving(false);
           setIsUploading(false);
           return;
         } finally {
           setIsUploading(false);
+          setPatchProgress(null);
         }
       }
 
@@ -631,6 +646,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
                 isSaving={isSaving}
                 isUploading={isUploading}
                 uploadProgress={uploadProgress}
+                patchProgress={patchProgress}
               />
             )}
           </Stack>
@@ -658,7 +674,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
                 disabled={!stepValid[3] || locked}
                 sx={primaryButtonSx}
               >
-                {isUploading ? `Uploading ${Math.round(uploadProgress)}%` : isSaving ? 'Creating…' : 'Create and deploy'}
+                {patchProgress ? 'Uploading patches' : isUploading ? `Uploading ${Math.round(uploadProgress)}%` : isSaving ? 'Creating…' : 'Create and deploy'}
               </Button>
             )}
           </Stack>

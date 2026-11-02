@@ -1,5 +1,6 @@
 import { LinearProgress, Stack, Typography } from '@mui/material';
 import { colors } from '../../../../theme/colors';
+import { patchStatusLabel } from '../../../../utils/publishPatch';
 import { PreviewCard, ReviewRow } from './formStyles';
 
 export default function ReviewStep({
@@ -14,6 +15,7 @@ export default function ReviewStep({
   isSaving,
   isUploading,
   uploadProgress,
+  patchProgress,
 }) {
   return (
     <Stack direction="row" gap={3} alignItems="flex-start">
@@ -29,12 +31,20 @@ export default function ReviewStep({
         {(isSaving || isUploading) && (
           <Stack gap={1} sx={{ mt: 2 }}>
             <Typography sx={{ color: colors.text, fontSize: 14 }}>
-              {isUploading ? `Uploading build… ${Math.round(uploadProgress)}%` : 'Creating the game…'}
+              {patchProgress
+                ? patchStatusLabel(patchProgress)
+                : isUploading
+                  ? `Uploading build… ${Math.round(uploadProgress)}%`
+                  : 'Creating the game…'}
             </Typography>
             {isUploading && (
               <LinearProgress
                 variant="determinate"
-                value={uploadProgress}
+                value={
+                  patchProgress?.totalBytes
+                    ? (patchProgress.uploadedBytes / patchProgress.totalBytes) * 100
+                    : uploadProgress
+                }
                 sx={{
                   height: 8,
                   borderRadius: 4,

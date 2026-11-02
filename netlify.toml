@@ -118,3 +118,11 @@ path = "/delete-package"
 [[edge_functions]]
 function = "get-game-by-id"
 path = "/get-game-by-id/*"
+
+[[edge_functions]]
+function = "get-latest-build"
+path = "/get-latest-build/*"
+
+[[edge_functions]]
+function = "register-build"
+path = "/register-build"
