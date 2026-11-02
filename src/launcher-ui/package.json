@@ -39,8 +39,15 @@
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
+    ],
+    "overrides": [
+      {
+        "files": ["**/*.test.js", "**/*.spec.js"],
+        "env": {
+          "jest": true
+        }
+      }
     ]
   },
   "browserslist": {
@@ -57,6 +64,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "eslint": "8.57.1",
     "react-router-sitemap-generator": "^0.0.8"
   },
   "overrides": {
