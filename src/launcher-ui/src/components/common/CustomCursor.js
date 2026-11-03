@@ -86,6 +86,7 @@ const CustomCursor = () => {
   const handlePointerOver = useCallback(e => {
     const target =
       e.target.closest('.toast-hover') ||
+      e.target.closest('.cursor-hover') ||
       (e.target.tagName === 'BUTTON'
         ? e.target
         : e.target.closest('button') ||
