@@ -14,6 +14,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import { colors } from '../../theme/colors';
 import AccountSettings, { services, useConnectedProviders } from './AccountSettings';
+import StorageBreakdown from './StorageBreakdown';
 import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
 import TeamDashboard from './TeamDashboard';
@@ -152,6 +153,14 @@ export default function AccountDashboard({ username }) {
         <div className="flex flex-col gap-3 size-full mt-0" style={{ overflow: 'hidden' }}>
           <Routes>
             <Route index element={<Navigate to="teams" replace />} />
+            <Route
+              path="settings/storage"
+              element={
+                <Grid>
+                  <StorageBreakdown />
+                </Grid>
+              }
+            />
             <Route
               path="settings"
               element={

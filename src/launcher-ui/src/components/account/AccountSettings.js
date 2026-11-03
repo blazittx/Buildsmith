@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Divider as MuiDivider,
   Grid,
@@ -13,6 +14,7 @@ import {
 import { colors } from '../../theme/colors';
 import LogoutButton from './LogoutButton';
 import BetaInvites from './BetaInvites';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
@@ -302,9 +304,24 @@ const AccountSettings = ({ username }) => {
 
         {/* Quota/Usage Section */}
         <Stack spacing={2}>
-          <Typography variant="subtitle2" sx={{ color: colors.text, fontWeight: 500 }}>
-            Storage Usage
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="subtitle2" sx={{ color: colors.text, fontWeight: 500 }}>
+              Storage Usage
+            </Typography>
+            <Link to="/account/dashboard/settings/storage" style={{ textDecoration: 'none', width: 'fit-content' }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                gap={0.5}
+                sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+              >
+                <Typography sx={{ fontSize: 13, textDecoration: 'underline', color: 'inherit' }}>
+                  View files
+                </Typography>
+                <ArrowForwardIcon sx={{ fontSize: 16 }} />
+              </Stack>
+            </Link>
+          </Stack>
           {quotaLoading ? (
             <Skeleton variant="rectangular" width={240} height={32} />
           ) : quotaError ? (

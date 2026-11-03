@@ -1,4 +1,4 @@
-const { S3Client, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const BUCKET = 'diabolicallauncher';
 
@@ -57,6 +57,11 @@ async function objectSize(s3, key) {
   }
 }
 
+async function readObject(s3, key) {
+  const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  return Buffer.from(await res.Body.transformToByteArray());
+}
+
 async function listSizes(s3, prefix) {
   const sizes = new Map();
   let token;
@@ -92,4 +97,4 @@ function cdnKey(url) {
   }
 }
 
-module.exports = { r2Client, deletePrefix, deleteKeys, cdnKey, listSizes, objectSize };
+module.exports = { r2Client, deletePrefix, deleteKeys, cdnKey, listSizes, objectSize, readObject };

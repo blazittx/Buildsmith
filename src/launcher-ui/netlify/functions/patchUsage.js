@@ -16,11 +16,13 @@ async function apiPost(path, body) {
   return data;
 }
 
-async function gameIdsForSession(sessionId) {
+async function gamesForSession(sessionId) {
   const games = await apiPost('/rest-api/users/games', { session_id: sessionId });
-  return (Array.isArray(games) ? games : [])
-    .map(game => game.game_id)
-    .filter(id => GAME_ID.test(id));
+  return (Array.isArray(games) ? games : []).filter(game => GAME_ID.test(game.game_id));
+}
+
+async function gameIdsForSession(sessionId) {
+  return (await gamesForSession(sessionId)).map(game => game.game_id);
 }
 
 async function patchUsageBytes(s3, sessionId) {
@@ -52,4 +54,4 @@ async function assertRoom(s3, sessionId, addedBytes) {
   }
 }
 
-module.exports = { patchUsageBytes, quotaLimit, assertRoom };
+module.exports = { patchUsageBytes, quotaLimit, assertRoom, gamesForSession };
