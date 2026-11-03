@@ -2,6 +2,7 @@ import React from 'react';
 import { Stack, TextField } from '@mui/material';
 import GameButton from './button/GameButton';
 import { colors } from '../theme/colors';
+import { downloadGameZip } from '../utils/downloadBuild';
 
 const GameCard = ({
   game,
@@ -62,45 +63,23 @@ const GameCard = ({
   }, [game.game_id]);
 
   const handleDownload = async () => {
+    if (downloadProgress) return;
     if (window.electronAPI) {
-      // Desktop environment - use electron download
       window.electronAPI.downloadGame(game.game_id);
-    } else {
-      // Web environment - download as zip
-      try {
-        const sessionId = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('sessionID='))
-          ?.split('=')[1];
-
-        // Get presigned URL
-        const presignResp = await fetch('https://cdn.diabolical.services/generateDownloadUrl', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(sessionId && { sessionID: sessionId }),
-          },
-          body: JSON.stringify({
-            key: `R2/${game.game_id}/Versions/Build-StandaloneWindows64-${game.version}.zip`,
-          }),
-        });
-
-        if (!presignResp.ok) {
-          throw new Error('Failed to generate download URL');
-        }
-
-        const { url: downloadUrl } = await presignResp.json();
-
-        // Create a temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `${game.game_name}-${game.version}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Download error:', error);
-      }
+      return;
+    }
+    try {
+      setDownloadProgress('0%');
+      await downloadGameZip(game, {
+        onProgress: ({ downloadedBytes, totalBytes }) => {
+          const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+          setDownloadProgress(`${percent}%`);
+        },
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setDownloadProgress(null);
     }
   };
 

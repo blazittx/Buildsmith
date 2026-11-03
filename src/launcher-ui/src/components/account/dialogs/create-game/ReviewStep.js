@@ -14,7 +14,6 @@ export default function ReviewStep({
   buildLabel,
   isSaving,
   isUploading,
-  uploadProgress,
   patchProgress,
 }) {
   return (
@@ -31,11 +30,7 @@ export default function ReviewStep({
         {(isSaving || isUploading) && (
           <Stack gap={1} sx={{ mt: 2 }}>
             <Typography sx={{ color: colors.text, fontSize: 14 }}>
-              {patchProgress
-                ? patchStatusLabel(patchProgress)
-                : isUploading
-                  ? `Uploading build… ${Math.round(uploadProgress)}%`
-                  : 'Creating the game…'}
+              {patchProgress ? patchStatusLabel(patchProgress) : 'Creating the game…'}
             </Typography>
             {isUploading && (
               <LinearProgress
@@ -43,7 +38,7 @@ export default function ReviewStep({
                 value={
                   patchProgress?.totalBytes
                     ? (patchProgress.uploadedBytes / patchProgress.totalBytes) * 100
-                    : uploadProgress
+                    : 0
                 }
                 sx={{
                   height: 8,

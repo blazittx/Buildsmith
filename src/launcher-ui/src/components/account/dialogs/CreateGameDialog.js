@@ -7,7 +7,6 @@ import CheckIcon from '@mui/icons-material/Check';
 import Cookies from 'js-cookie';
 import { colors } from '../../../theme/colors';
 import { getAllInstallationPairs } from '../../../pages/AccountPage';
-import { uploadToCdn } from '../../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../../utils/notify';
 import { publishPatch } from '../../../utils/publishPatch';
 import { openGitHubAppInstall } from '../../../utils/githubAppInstall';
@@ -45,7 +44,6 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
   const [gameFile, setGameFile] = useState(null);
   const [gameFileName, setGameFileName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [patchProgress, setPatchProgress] = useState(null);
   const [gameStatus, setGameStatus] = useState('public');
   const [screenshots, setScreenshots] = useState([]);
@@ -286,36 +284,20 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
       // Only upload file if game creation was successful and we're in manual upload mode
       if (activeTab === 1 && gameFile) {
         setIsUploading(true);
-        setUploadProgress(0);
-        setPatchProgress(null);
+        setPatchProgress({ uploadedBytes: 0, totalBytes: 0 });
         try {
-          await uploadToCdn(gameFile, {
-            sessionID,
-            onProgress: setUploadProgress,
-            fields: {
-              isGameUpload: true,
-              gameId: gameId.trim(),
-              version: gameVersion,
-            },
+          await publishPatch(gameFile, {
+            gameId: gameId.trim(),
+            version: gameVersion,
+            sessionId: sessionID,
+            onProgress: setPatchProgress,
           });
-          try {
-            await publishPatch(gameFile, {
-              gameId: gameId.trim(),
-              version: gameVersion,
-              sessionId: sessionID,
-              onProgress: setPatchProgress,
-            });
-          } catch (err) {
-            notify('Patch index failed', err.message || 'The full build uploaded, but the patch was not published.');
-          }
         } catch (err) {
           console.error('Upload failed:', err);
           notify('Upload Failed', uploadErrorMessage(err, 'Could not upload your game file.'));
-          // Reset the upload state
           setGameFile(null);
           setGameFileName('');
           setGameVersion('0.0.1');
-          setUploadProgress(0);
           setPatchProgress(null);
           setIsSaving(false);
           setIsUploading(false);
@@ -646,7 +628,6 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
                 buildLabel={activeTab === 0 ? selectedRepo : `${gameFileName || 'ZIP file'} · v${gameVersion}`}
                 isSaving={isSaving}
                 isUploading={isUploading}
-                uploadProgress={uploadProgress}
                 patchProgress={patchProgress}
               />
             )}
@@ -675,7 +656,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
                 disabled={!stepValid[3] || locked}
                 sx={primaryButtonSx}
               >
-                {patchProgress ? 'Uploading patches' : isUploading ? `Uploading ${Math.round(uploadProgress)}%` : isSaving ? 'Creating…' : 'Create and deploy'}
+                {isUploading ? 'Uploading patches' : isSaving ? 'Creating…' : 'Create and deploy'}
               </Button>
             )}
           </Stack>

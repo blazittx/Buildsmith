@@ -12,6 +12,7 @@ import Cookies from 'js-cookie';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLocation } from 'react-router-dom';
 import { autoAddGameToLibrary } from '../utils/autoAddGame';
+import { downloadGameZip } from '../utils/downloadBuild';
 
 const LibraryPage = () => {
   const location = useLocation();
@@ -465,45 +466,32 @@ const LibraryPage = () => {
     if (activeDownloads[selectedGame.game_id] || applyingUpdate[selectedGame.game_id]) return;
 
     if (window.electronAPI) {
-      // Desktop environment - use electron download
       window.electronAPI.downloadGame(selectedGame.game_id);
-    } else {
-      // Web environment - download as zip
-      try {
-        const sessionId = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('sessionID='))
-          ?.split('=')[1];
-
-        // Get presigned URL
-        const presignResp = await fetch('https://cdn.diabolical.services/generateDownloadUrl', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(sessionId && { sessionID: sessionId }),
-          },
-          body: JSON.stringify({
-            key: `R2/${selectedGame.game_id}/Versions/Build-StandaloneWindows64-${selectedGame.version}.zip`,
-          }),
-        });
-
-        if (!presignResp.ok) {
-          throw new Error('Failed to generate download URL');
-        }
-
-        const { url: downloadUrl } = await presignResp.json();
-
-        // Create a temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `${selectedGame.game_name}-${selectedGame.version}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Download error:', error);
-        // You might want to show an error notification here
-      }
+      return;
+    }
+    const game = selectedGame;
+    try {
+      setActiveDownloads(prev => ({
+        ...prev,
+        [game.game_id]: { percent: 0, percentageString: '0%', time: Date.now() },
+      }));
+      await downloadGameZip(game, {
+        onProgress: ({ downloadedBytes, totalBytes }) => {
+          const percent = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+          setActiveDownloads(prev => ({
+            ...prev,
+            [game.game_id]: { percent, percentageString: `${percent}%`, time: Date.now() },
+          }));
+        },
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setActiveDownloads(prev => {
+        const updated = { ...prev };
+        delete updated[game.game_id];
+        return updated;
+      });
     }
   };
 

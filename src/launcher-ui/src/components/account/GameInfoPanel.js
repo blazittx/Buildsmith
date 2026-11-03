@@ -25,7 +25,6 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../../theme/colors';
 import Cookies from 'js-cookie';
-import { uploadToCdn } from '../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../utils/notify';
 import { patchStatusLabel, publishPatch } from '../../utils/publishPatch';
 import { openGitHubAppInstall } from '../../utils/githubAppInstall';
@@ -45,7 +44,6 @@ const GameInfoPanel = ({ game }) => {
   const [gameFile, setGameFile] = useState(null);
   const [gameFileName, setGameFileName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [patchProgress, setPatchProgress] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -272,31 +270,16 @@ const GameInfoPanel = ({ game }) => {
     }
 
     setIsUploading(true);
-    setUploadProgress(0);
-    setPatchProgress(null);
+    setPatchProgress({ uploadedBytes: 0, totalBytes: 0 });
 
     try {
       const sessionID = Cookies.get('sessionID');
-      await uploadToCdn(gameFile, {
-        sessionID,
-        onProgress: setUploadProgress,
-        fields: {
-          isGameUpload: true,
-          gameId: game.game_id.trim(),
-          version: manualVersion,
-        },
+      await publishPatch(gameFile, {
+        gameId: game.game_id.trim(),
+        version: manualVersion,
+        sessionId: sessionID,
+        onProgress: setPatchProgress,
       });
-      try {
-        setPatchProgress({ uploadedBytes: 0, totalBytes: 0 });
-        await publishPatch(gameFile, {
-          gameId: game.game_id.trim(),
-          version: manualVersion,
-          sessionId: sessionID,
-          onProgress: setPatchProgress,
-        });
-      } catch (err) {
-        notify('Patch index failed', err.message || 'The full build uploaded, but the patch was not published.');
-      }
 
       // After successful upload, update the game version in the database
       const sessionID2 = Cookies.get('sessionID');
@@ -329,7 +312,6 @@ const GameInfoPanel = ({ game }) => {
       setGameFile(null);
       setGameFileName('');
       setManualVersion('');
-      setUploadProgress(0);
       setPatchProgress(null);
     } finally {
       setIsUploading(false);
@@ -706,16 +688,14 @@ const GameInfoPanel = ({ game }) => {
               <Stack alignItems="center" gap={1} sx={{ width: '80%' }}>
                 <CircularProgress size={24} />
                 <span style={{ color: colors.text, textAlign: 'center' }}>
-                  {patchProgress ? patchStatusLabel(patchProgress) : `Uploading build… ${Math.round(uploadProgress)}%`}
+                  {patchStatusLabel(patchProgress)}
                 </span>
                 <LinearProgress
                   variant="determinate"
                   value={
                     patchProgress?.totalBytes
                       ? (patchProgress.uploadedBytes / patchProgress.totalBytes) * 100
-                      : patchProgress
-                        ? 0
-                        : uploadProgress
+                      : 0
                   }
                   sx={{
                     width: '100%',
