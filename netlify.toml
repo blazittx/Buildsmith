@@ -76,6 +76,18 @@ function = "verify-session"
 path = "/verify-session"
 
 [[edge_functions]]
+function = "create-beta-invite"
+path = "/create-beta-invite"
+
+[[edge_functions]]
+function = "get-beta-invites"
+path = "/get-beta-invites"
+
+[[edge_functions]]
+function = "redeem-beta-invite"
+path = "/redeem-beta-invite"
+
+[[edge_functions]]
 function = "delete-session"
 path = "/delete-session"
 

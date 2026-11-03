@@ -41,6 +41,28 @@ export const getAllInstallationPairs = () => {
   return pairs;
 };
 
+const redeemPendingInvite = async sessionID => {
+  const code = sessionStorage.getItem('betaInvite');
+  if (!code || !sessionID) return;
+  sessionStorage.removeItem('betaInvite');
+  try {
+    const res = await fetch('/redeem-beta-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', sessionID },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok && res.status >= 500) sessionStorage.setItem('betaInvite', code);
+    window.electronAPI?.showCustomNotification(
+      res.ok ? 'Beta access' : 'Invite failed',
+      data.message || data.error || 'Could not use this invite'
+    );
+    if (res.ok) window.dispatchEvent(new Event('beta-access-granted'));
+  } catch (error) {
+    sessionStorage.setItem('betaInvite', code);
+  }
+};
+
 export default function AccountPage() {
   const [username, setUsername] = useState(Cookies.get('username') || '');
   const [isLoggedIn, setIsLoggedIn] = useState(!!Cookies.get('sessionID'));
@@ -58,6 +80,8 @@ export default function AccountPage() {
         const sessionIDParam = params.get('sessionID');
         const usernameParam = params.get('username');
         const githubIdParam = params.get('githubID');
+        const inviteFromUrl = params.get('betaInvite');
+        if (inviteFromUrl) sessionStorage.setItem('betaInvite', inviteFromUrl);
 
         if (sessionIDParam && usernameParam && githubIdParam) {
           const verified = await fetch('/verify-session', { headers: { sessionID: sessionIDParam } });
@@ -71,7 +95,13 @@ export default function AccountPage() {
 
           setUsername(usernameParam);
           setIsLoggedIn(true);
-          navigate(location.pathname, { replace: true });
+          await redeemPendingInvite(sessionIDParam);
+          params.delete('sessionID');
+          params.delete('username');
+          params.delete('githubID');
+          params.delete('betaInvite');
+          const search = params.toString();
+          navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
           return;
         }
 
@@ -86,13 +116,13 @@ export default function AccountPage() {
           headers: { sessionID },
         });
 
-        if (!res.ok) {
+        if (res.status === 401 || res.status === 404) {
           Cookies.remove('sessionID');
           Cookies.remove('username');
           Cookies.remove('githubID');
           setUsername('');
           setIsLoggedIn(false);
-        } else {
+        } else if (res.ok) {
           await res.json();
           Cookies.set('sessionID', sessionID, cookieOptions);
           const savedUsername = Cookies.get('username');
@@ -100,13 +130,22 @@ export default function AccountPage() {
           if (savedUsername) Cookies.set('username', savedUsername, cookieOptions);
           if (savedGithubId) Cookies.set('githubID', savedGithubId, cookieOptions);
           setIsLoggedIn(true);
+          await redeemPendingInvite(sessionID);
+        } else {
+          setIsLoggedIn(true);
+          await redeemPendingInvite(sessionID);
+        }
+        if (inviteFromUrl) {
+          params.delete('betaInvite');
+          const search = params.toString();
+          navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
         }
       } catch (error) {
-        Cookies.remove('sessionID');
-        Cookies.remove('username');
-        Cookies.remove('githubID');
-        setUsername('');
-        setIsLoggedIn(false);
+        const existingSession = Cookies.get('sessionID');
+        if (existingSession) {
+          setIsLoggedIn(true);
+          await redeemPendingInvite(existingSession);
+        }
       } finally {
         setCheckingSession(false);
       }
@@ -158,6 +197,7 @@ export default function AccountPage() {
               Cookies.set('githubID', data.githubID, cookieOptions);
               setUsername(data.username);
               setIsLoggedIn(true);
+              await redeemPendingInvite(data.sessionID);
               window.dispatchEvent(new Event('external-auth-success'));
               break;
             }

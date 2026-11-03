@@ -1,9 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { Slide } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Slide, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { colors } from '../theme/colors';
+
+const StyledDialog = styled(Dialog)({
+  '& .MuiDialog-paper': {
+    backgroundColor: colors.background,
+    border: '1px solid' + colors.border,
+    borderRadius: '4px',
+    minWidth: '400px',
+    maxWidth: '500px',
+    margin: '16px',
+  },
+});
 
 const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDismiss }) => {
   const [show, setShow] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
+  const messageOpenRef = useRef(false);
 
   useEffect(() => {
     // Trigger slide in after mount
@@ -13,7 +27,7 @@ const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDis
 
     // Auto-dismiss after a specified duration by sliding out
     const autoTimer = setTimeout(() => {
-      setShow(false);
+      if (!messageOpenRef.current) setShow(false);
     }, autoDismiss);
 
     return () => {
@@ -40,10 +54,22 @@ const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDis
     setShow(false);
   };
 
+  const openMessage = () => {
+    messageOpenRef.current = true;
+    setMessageOpen(true);
+  };
+
+  const closeMessage = () => {
+    messageOpenRef.current = false;
+    setMessageOpen(false);
+    setShow(false);
+  };
+
   return (
+    <>
     <Slide direction="left" in={show} timeout={timeout} onExited={handleExited}>
       <div
-        className="background relative rounded-sm shadow-lg transition-all duration-500 dialog outline"
+        className="toast-hover background relative rounded-sm shadow-lg transition-all duration-500 dialog outline"
         style={{
           justifyContent: 'space-between',
           padding: 0,
@@ -55,7 +81,11 @@ const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDis
         }}
       >
         <div className="flex items-center justify-between h-full gap-3">
-          <div className="p-3" style={{ maxWidth: 320, minWidth: 0 }}>
+          <div
+            className="p-3"
+            onClick={openMessage}
+            style={{ maxWidth: 320, minWidth: 0, cursor: 'pointer' }}
+          >
             <strong
               title={toast.title}
               style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -93,6 +123,47 @@ const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDis
         </div>
       </div>
     </Slide>
+    <StyledDialog open={messageOpen} onClose={closeMessage}>
+      <DialogTitle
+        className="dialog"
+        sx={{
+          color: colors.text,
+          borderBottom: '1px solid' + colors.border,
+          padding: '16px 24px',
+          height: 'fit-content',
+        }}
+      >
+        {toast.title}
+      </DialogTitle>
+      <DialogContent sx={{ padding: '24px !important', backgroundColor: colors.background }}>
+        <Typography sx={{ color: colors.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {toast.body}
+        </Typography>
+      </DialogContent>
+      <DialogActions
+        className="dialog"
+        sx={{
+          padding: '16px 24px',
+          borderTop: '1px solid' + colors.border,
+          gap: '12px',
+        }}
+      >
+        <Button
+          onClick={closeMessage}
+          sx={{
+            color: colors.text,
+            backgroundColor: colors.background,
+            outline: '1px solid' + colors.border,
+            borderRadius: '4px',
+            padding: '8px 16px',
+            '&:hover': { backgroundColor: colors.button },
+          }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </StyledDialog>
+    </>
   );
 };
 

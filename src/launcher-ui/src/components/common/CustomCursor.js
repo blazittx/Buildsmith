@@ -85,7 +85,8 @@ const CustomCursor = () => {
 
   const handlePointerOver = useCallback(e => {
     const target =
-      e.target.tagName === 'BUTTON'
+      e.target.closest('.toast-hover') ||
+      (e.target.tagName === 'BUTTON'
         ? e.target
         : e.target.closest('button') ||
           e.target.closest('.MuiButton-root') ||
@@ -100,7 +101,7 @@ const CustomCursor = () => {
           e.target.closest('.settings-section-content') ||
           e.target.closest('.MuiButtonBase-root') ||
           e.target.closest('.MuiMenuItem-root') ||
-          e.target.closest('.MuiAvatar-root');
+          e.target.closest('.MuiAvatar-root'));
 
     if (target) {
       hoveredElement.current = target;

@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { colors } from '../../theme/colors';
 import LogoutButton from './LogoutButton';
+import BetaInvites from './BetaInvites';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
@@ -296,6 +297,8 @@ const AccountSettings = ({ username }) => {
             </LogoutButton>
           </Stack>
         </Stack>
+
+        <BetaInvites />
 
         {/* Quota/Usage Section */}
         <Stack spacing={2}>
