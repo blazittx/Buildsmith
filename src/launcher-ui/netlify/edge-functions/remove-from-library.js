@@ -57,6 +57,19 @@ export default async function (request, context) {
       });
     }
 
+    const gameResponse = await fetch(`${apiBaseUrl}/rest-api/games/${encodeURIComponent(game_id)}`, {
+      headers: { 'x-api-key': apiKey },
+    });
+    if (gameResponse.ok) {
+      const game = await gameResponse.json();
+      if (String(game.status || '').toLowerCase() === 'private') {
+        return new Response(JSON.stringify({ error: 'Private games stay in your library.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Forward the request to the Buildsmith API
     const response = await fetch(`${apiBaseUrl}/rest-api/library/remove`, {
       method: 'POST',

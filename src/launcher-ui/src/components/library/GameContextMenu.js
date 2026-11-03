@@ -78,6 +78,8 @@ export const GameContextMenu = ({
 
   if (!game) return null;
 
+  const isPrivate = String(game.status || '').toLowerCase() === 'private';
+
   return (
     <Popover
       open={Boolean(anchorEl)}
@@ -232,7 +234,7 @@ export const GameContextMenu = ({
           </>
         )}
 
-        {/* Remove from Library (always available) */}
+        {!isPrivate && (
         <MenuItem
           onClick={() => {
             if (onRemoveFromLibrary && canRemoveFromLibrary) onRemoveFromLibrary();
@@ -281,6 +283,7 @@ export const GameContextMenu = ({
           </ListItemIcon>
           <ListItemText>Remove from Library</ListItemText>
         </MenuItem>
+        )}
       </Box>
     </Popover>
   );

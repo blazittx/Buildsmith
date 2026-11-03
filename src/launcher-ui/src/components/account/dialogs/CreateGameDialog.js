@@ -508,7 +508,7 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
       onClose={locked ? undefined : handleClose}
       aria-labelledby="create-game-dialog-title"
     >
-      <Stack sx={{ flex: 1, width: '100%', backgroundColor: '#070707', p: 3, minHeight: 0 }}>
+      <Stack sx={{ flex: 1, width: '100%', backgroundColor: 'transparent', p: 3, minHeight: 0 }}>
         <Stack sx={{ flex: 1, minHeight: 0, gap: 2 }}>
           <Stack gap={1.5}>
             <Stack direction="row" justifyContent="space-between" alignItems="baseline">

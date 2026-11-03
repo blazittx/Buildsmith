@@ -77,7 +77,11 @@ export const StyledDialog = styled(Dialog)({
     height: 'min(680px, calc(100vh - 96px))',
     display: 'flex',
     flexDirection: 'column',
-    background: '#070707',
+    backgroundColor: colors.background,
+    backgroundImage:
+      'radial-gradient(rgba(87, 87, 87, 0.3) 1px, transparent 1px), radial-gradient(rgba(87, 87, 87, 0.3) 1px, transparent 1px)',
+    backgroundSize: '20px 20px',
+    animation: 'moveBackground 3s linear infinite',
     border: '1px solid ' + colors.border,
     borderRadius: '4px',
     boxShadow: 'none',

@@ -556,7 +556,7 @@ const LibraryPage = () => {
 
   // Remove from library handler
   const handleRemoveFromLibrary = async () => {
-    if (!selectedGame) return;
+    if (!selectedGame || String(selectedGame.status || '').toLowerCase() === 'private') return;
     try {
       const sessionID = Cookies.get('sessionID');
 
