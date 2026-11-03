@@ -84,7 +84,9 @@ export default function AccountPage() {
         if (inviteFromUrl) sessionStorage.setItem('betaInvite', inviteFromUrl);
 
         if (sessionIDParam && usernameParam && githubIdParam) {
-          const verified = await fetch('/verify-session', { headers: { sessionID: sessionIDParam } });
+          const verified = await fetch('/verify-session', {
+            headers: { sessionID: sessionIDParam },
+          });
           if (!verified.ok) {
             setCheckingSession(false);
             return;
@@ -101,7 +103,10 @@ export default function AccountPage() {
           params.delete('githubID');
           params.delete('betaInvite');
           const search = params.toString();
-          navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+          navigate(
+            { pathname: location.pathname, search: search ? `?${search}` : '' },
+            { replace: true }
+          );
           return;
         }
 
@@ -138,7 +143,10 @@ export default function AccountPage() {
         if (inviteFromUrl) {
           params.delete('betaInvite');
           const search = params.toString();
-          navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+          navigate(
+            { pathname: location.pathname, search: search ? `?${search}` : '' },
+            { replace: true }
+          );
         }
       } catch (error) {
         const existingSession = Cookies.get('sessionID');
@@ -190,7 +198,9 @@ export default function AccountPage() {
           // Handle each provider's data
           switch (provider) {
             case 'github': {
-              const verified = await fetch('/verify-session', { headers: { sessionID: data.sessionID } });
+              const verified = await fetch('/verify-session', {
+                headers: { sessionID: data.sessionID },
+              });
               if (!verified.ok) break;
               Cookies.set('sessionID', data.sessionID, cookieOptions);
               Cookies.set('username', data.username, cookieOptions);
