@@ -290,27 +290,38 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
       const url = pkg.package_url;
       if (!url) throw new Error('No package_url found for this package.');
 
-      // Download the package
+      const sessionID = document.cookie.match(/sessionID=([^;]+)/)?.[1];
+      const key = new URL(url).pathname.replace(/^\//, '');
+      const signed = await fetch('https://cdn.diabolical.services/generateDownloadUrl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionID ? { sessionID } : {}),
+        },
+        body: JSON.stringify({ key }),
+      });
+      const signedData = await signed.json().catch(() => ({}));
+      if (!signed.ok) throw new Error(signedData.error || 'Could not prepare the package download');
+
       const success = await window.electronAPI.downloadUnityPackage(
-        url,
+        signedData.url,
         `${pkg.package_id || 'UnityPackage'}`
       );
 
       if (success) {
         const packagePath = await window.electronAPI.getLastDownloadedPath();
         if (packagePath) {
-          await window.electronAPI.installUnityPackage(packagePath);
-          // Delete the package after installation
-          await window.electronAPI.deleteFile(packagePath);
+          const imported = await window.electronAPI.installUnityPackage(packagePath);
           if (window.electronAPI.showCustomNotification) {
             window.electronAPI.showCustomNotification(
-              'Package Imported',
-              'The Unity package was opened. Please complete the import in your Unity Editor.'
+              'Package sent to Unity',
+              `Confirm the import in ${imported.name}. If that editor is in Play mode, exit Play mode first.`
             );
           }
         }
       }
     } catch (err) {
+      if (err.message === 'Import cancelled') return;
       if (window.electronAPI && window.electronAPI.showCustomNotification) {
         window.electronAPI.showCustomNotification(
           'Download Failed',

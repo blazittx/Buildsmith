@@ -4,7 +4,6 @@ const { exec, spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
-const { download } = require('electron-dl');
 const { dialog } = require('electron');
 
 const updater = require('./updater');
@@ -26,6 +25,7 @@ const { cacheGamesLocally, readCachedGames } = require('./cacheManager');
 const { getPreferredExecutable, getAllUnityPackages } = require('./launcherUtils');
 const windowStore = require('./windowStore');
 const { isAllowedHost } = require('./allowedHost');
+const { importIntoOpenUnity } = require('./unityImport');
 
 // Track running game processes
 const runningGames = new Map();
@@ -510,32 +510,51 @@ function initIPCHandlers() {
   let lastDownloadedPath = null;
 
   ipcMain.handle('download-unity-package', async (event, url, defaultFilename) => {
-    const window = BrowserWindow.getFocusedWindow();
-    // Create a temporary directory for downloads
     const tempDir = path.join(app.getPath('temp'), 'buildsmith-unity-packages');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
+    await fs.promises.mkdir(tempDir, { recursive: true });
+    const safeName = String(defaultFilename || 'UnityPackage').replace(/[<>:"/\\|?*]/g, '_');
+    const filePath = path.join(tempDir, `${safeName}-${Date.now()}.unitypackage`);
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      let message = `Download failed (${res.status})`;
+      try {
+        message = JSON.parse(body).error || message;
+      } catch {
+        if (body) message = body.slice(0, 200);
+      }
+      throw new Error(message);
     }
 
-    // Generate a unique filename
-    const filename = `${defaultFilename || 'UnityPackage'}-${Date.now()}.unitypackage`;
-    const filePath = path.join(tempDir, filename);
-
+    const total = Number(res.headers.get('content-length')) || 0;
+    const stream = fs.createWriteStream(filePath);
+    let received = 0;
     try {
-      await download(window, url, {
-        directory: tempDir,
-        filename: filename,
-        onProgress: progress => {
-          // Optionally, send progress to renderer
-          event.sender.send('unity-package-download-progress', { percent: progress.percent });
-        },
+      const reader = res.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        if (!stream.write(Buffer.from(value))) {
+          await new Promise(resolve => stream.once('drain', resolve));
+        }
+        event.sender.send('unity-package-download-progress', {
+          percent: total ? received / total : 0,
+        });
+      }
+      await new Promise((resolve, reject) => {
+        stream.on('error', reject);
+        stream.end(resolve);
       });
-      lastDownloadedPath = filePath;
-      return true;
     } catch (error) {
-      console.error('Error downloading Unity package:', error);
-      return false;
+      stream.destroy();
+      await fs.promises.unlink(filePath).catch(() => {});
+      throw error;
     }
+
+    lastDownloadedPath = filePath;
+    return true;
   });
 
   // Add handler to get last downloaded path
@@ -566,17 +585,26 @@ function initIPCHandlers() {
     });
   });
 
-  // Add handler to install Unity package
   ipcMain.handle('install-unity-package', async (event, packagePath) => {
-    return new Promise((resolve, reject) => {
-      exec(`"${packagePath}"`, error => {
-        if (error) {
-          console.error('Error installing Unity package:', error);
-          reject(error);
-          return;
-        }
-        resolve(true);
+    const root = path.resolve(path.join(app.getPath('temp'), 'buildsmith-unity-packages'));
+    const resolved = path.resolve(String(packagePath || ''));
+    const relative = path.relative(root, resolved);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || path.extname(resolved).toLowerCase() !== '.unitypackage') {
+      throw new Error('Package path is not a downloaded Unity package');
+    }
+
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    return importIntoOpenUnity(resolved, async projects => {
+      const { response } = await dialog.showMessageBox(parent, {
+        type: 'question',
+        buttons: [...projects.map(project => project.name), 'Cancel'],
+        cancelId: projects.length,
+        defaultId: 0,
+        title: 'Import into Unity',
+        message: 'More than one Unity project is open.',
+        detail: 'Choose the project that should import this package.',
       });
+      return projects[response] || null;
     });
   });
 

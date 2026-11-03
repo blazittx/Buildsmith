@@ -33,7 +33,6 @@ const CONFIG = {
     BATCH_SIZE: 300, // Number of particles to process per batch
     CULLING: {
       ENABLED: true, // Whether to enable particle culling
-      MARGIN: 200, // Extra margin around viewport for culling (in pixels)
       MIN_SIZE: 0.1, // Minimum particle size to render
     },
   },
@@ -100,6 +99,7 @@ const BackgroundAnimation = ({ style = {} }) => {
   const lastFrameTimeRef = useRef(0);
   const visibleParticlesRef = useRef([]);
   const particlePoolRef = useRef(null);
+  const activeCountRef = useRef(0);
   const tempVecRef = useRef({ x: 0, y: 0 });
   const isPausedRef = useRef(false);
 
@@ -143,28 +143,49 @@ const BackgroundAnimation = ({ style = {} }) => {
     circlePathRef.current = new Path2D();
     circlePathRef.current.arc(0, 0, 1, 0, Math.PI * 2);
 
-    // Function to set canvas size
+    const buildGrid = (width, height) => {
+      const count =
+        Math.ceil(width / CONFIG.GRID_STEP) * Math.ceil(height / CONFIG.GRID_STEP);
+      if (!particlePoolRef.current || particlePoolRef.current.length < count) {
+        particlePoolRef.current = createParticlePool(count);
+      }
+
+      let particleIndex = 0;
+      for (let x = 0; x < width; x += CONFIG.GRID_STEP) {
+        for (let y = 0; y < height; y += CONFIG.GRID_STEP) {
+          const pos = particlePoolRef.current[particleIndex++];
+          pos.x = x;
+          pos.y = y;
+          pos.nx = x / CONFIG.NOISE_SCALE.BASE;
+          pos.ny = y / CONFIG.NOISE_SCALE.BASE;
+          pos.nx2 = x / CONFIG.NOISE_SCALE.HUE;
+          pos.ny2 = y / CONFIG.NOISE_SCALE.HUE;
+          pos.nx3 = x / CONFIG.NOISE_SCALE.VARIATION;
+          pos.ny3 = y / CONFIG.NOISE_SCALE.VARIATION;
+        }
+      }
+      activeCountRef.current = particleIndex;
+    };
+
+    // Backing store stays sharp on high-DPI screens. Dots are placed in CSS pixels,
+    // which is the visible window, so the extra device pixels are not simulated.
     const resizeCanvas = () => {
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      ctx.scale(dpr, dpr);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Update clear rect dimensions
-      reusableObjects.clearRect.width = canvas.width;
-      reusableObjects.clearRect.height = canvas.height;
+      reusableObjects.clearRect.width = width;
+      reusableObjects.clearRect.height = height;
+      buildGrid(width, height);
     };
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
-    // Initialize particle pool
-    const maxParticles = Math.ceil(
-      (canvas.width / CONFIG.GRID_STEP) * (canvas.height / CONFIG.GRID_STEP)
-    );
-    particlePoolRef.current = createParticlePool(maxParticles);
 
     // Simplex noise module with cached gradients
     noiseRef.current = (function () {
@@ -324,47 +345,24 @@ const BackgroundAnimation = ({ style = {} }) => {
 
     noiseRef.current.seed(Math.random());
 
-    // Pre-compute grid positions using object pool
-    let particleIndex = 0;
-    for (let x = 0; x < canvas.width; x += CONFIG.GRID_STEP) {
-      for (let y = 0; y < canvas.height; y += CONFIG.GRID_STEP) {
-        if (particleIndex >= particlePoolRef.current.length) break;
-
-        const pos = particlePoolRef.current[particleIndex++];
-        pos.x = x;
-        pos.y = y;
-        pos.nx = x / CONFIG.NOISE_SCALE.BASE;
-        pos.ny = y / CONFIG.NOISE_SCALE.BASE;
-        pos.nx2 = x / CONFIG.NOISE_SCALE.HUE;
-        pos.ny2 = y / CONFIG.NOISE_SCALE.HUE;
-        pos.nx3 = x / CONFIG.NOISE_SCALE.VARIATION;
-        pos.ny3 = y / CONFIG.NOISE_SCALE.VARIATION;
-      }
-    }
-
-    // Update visible particles based on viewport and culling settings
-    const updateVisibleParticles = (t, t2) => {
+    const updateVisibleParticles = t2 => {
+      const pool = particlePoolRef.current;
+      const count = activeCountRef.current;
+      const visible = visibleParticlesRef.current;
       if (!CONFIG.RENDER.CULLING.ENABLED) {
-        visibleParticlesRef.current = particlePoolRef.current;
+        for (let i = 0; i < count; i++) visible[i] = pool[i];
+        visible.length = count;
         return;
       }
 
-      const margin = CONFIG.RENDER.CULLING.MARGIN;
-      const minX = -margin;
-      const maxX = canvas.width + margin;
-      const minY = -margin;
-      const maxY = canvas.height + margin;
-
-      visibleParticlesRef.current = particlePoolRef.current.filter(pos => {
-        // Check if particle is within viewport bounds
-        if (pos.x < minX || pos.x > maxX || pos.y < minY || pos.y > maxY) {
-          return false;
-        }
-
-        // Check if particle is large enough to be visible
+      let n = 0;
+      for (let i = 0; i < count; i++) {
+        const pos = pool[i];
         const point = Math.abs(noiseRef.current.simplex3(pos.nx, pos.ny, t2));
-        return point >= CONFIG.RENDER.CULLING.MIN_SIZE;
-      });
+        if (point < CONFIG.RENDER.CULLING.MIN_SIZE) continue;
+        visible[n++] = pos;
+      }
+      visible.length = n;
     };
 
     function animate() {
@@ -395,8 +393,7 @@ const BackgroundAnimation = ({ style = {} }) => {
       const t2 = t * 2;
       const seed = globalHueSeedRef.current;
 
-      // Update visible particles
-      updateVisibleParticles(t, t2);
+      updateVisibleParticles(t2);
 
       // Collect colors for gradient with more variation
       const gradientColors = new Map(); // Using Map to store colors with their intensities

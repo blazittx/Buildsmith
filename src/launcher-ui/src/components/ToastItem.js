@@ -55,9 +55,23 @@ const ToastItem = ({ toast, timeout = 300, autoDismiss = 3000, onDownload, onDis
         }}
       >
         <div className="flex items-center justify-between h-full gap-3">
-          <div className="p-3">
-            <strong>{toast.title}</strong>
-            <p className="m-0" style={{ color: colors.border }}>
+          <div className="p-3" style={{ maxWidth: 320, minWidth: 0 }}>
+            <strong
+              title={toast.title}
+              style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {toast.title}
+            </strong>
+            <p
+              className="m-0"
+              title={toast.body}
+              style={{
+                color: colors.border,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {toast.body}
             </p>
           </div>
