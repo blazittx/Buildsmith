@@ -70,17 +70,10 @@ const NavBar = () => {
     >
       {!isMobile && (
         <Zoom in={true} timeout={200}>
-          <div
-            style={{
-              boxSizing: 'border-box',
-              width: 'calc(1.5em + 1.5rem + 2px)',
-              height: 'calc(1.5em + 1.5rem + 2px)',
-              padding: 4,
-            }}
-          >
+          <div>
             <OpenExternalLink url="https://buildsmith.app">
               <img
-                className="block h-full w-full cursor-pointer hover:scale-105 transition-transform"
+                className="w-full aspect-square cursor-pointer hover:scale-105 transition-transform"
                 src="/android-chrome-192x192.png"
                 alt="Icon"
                 draggable="false"
