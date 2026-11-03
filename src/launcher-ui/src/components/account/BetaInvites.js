@@ -89,6 +89,9 @@ export default function BetaInvites() {
   if (hidden) return null;
   if (loading) return <Skeleton variant="rectangular" width="100%" height={72} />;
 
+  const unlimited = !!data?.unlimited;
+  const remaining = data?.invites_remaining ?? 0;
+
   return (
     <Stack spacing={2}>
       <MuiDivider sx={{ borderColor: colors.border, opacity: 1 }} />
@@ -96,7 +99,9 @@ export default function BetaInvites() {
         Beta invites
       </Typography>
       <Typography variant="body2" sx={{ color: colors.text, opacity: 0.7, fontSize: 14 }}>
-        You have {data?.invites_remaining ?? 0} invite{data?.invites_remaining === 1 ? '' : 's'} left.
+        {unlimited
+          ? 'You can create as many invites as you want.'
+          : `You have ${remaining} invite${remaining === 1 ? '' : 's'} left.`}{' '}
         Each link can be used once. The person who uses it becomes a beta tester and can invite others.
       </Typography>
       {error ? (
@@ -104,7 +109,7 @@ export default function BetaInvites() {
           {error}
         </Typography>
       ) : null}
-      <Button sx={buttonStyle} disabled={busy || !data?.invites_remaining} onClick={createInvite}>
+      <Button sx={buttonStyle} disabled={busy || (!unlimited && !remaining)} onClick={createInvite}>
         Create invite link
       </Button>
       {(data?.invites || []).map(invite => (

@@ -88,6 +88,10 @@ function = "redeem-beta-invite"
 path = "/redeem-beta-invite"
 
 [[edge_functions]]
+function = "preview-beta-invite"
+path = "/preview-beta-invite"
+
+[[edge_functions]]
 function = "delete-session"
 path = "/delete-session"
 

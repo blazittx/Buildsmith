@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Layout from '../components/Layout';
 import Cookies from 'js-cookie';
 import AccountDashboard from '../components/account/AccountDashboard';
+import BetaInviteDialog from '../components/account/BetaInviteDialog';
 import LoginScreen from '../components/account/LoginScreen';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -41,7 +42,32 @@ export const getAllInstallationPairs = () => {
   return pairs;
 };
 
-const redeemPendingInvite = async sessionID => {
+const reportInviteResult = (current, next) => {
+  if ((current?.status === 'accepted' || current?.status === 'already') && next.status === 'ready') {
+    return { ...current, inviter: current.inviter || next.inviter };
+  }
+  return { ...current, ...next, inviter: next.inviter || current?.inviter };
+};
+
+const loadInvitePreview = async (code, onResult) => {
+  try {
+    const res = await fetch('/preview-beta-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      onResult({ status: 'invalid', error: data.error || 'This invite link is not valid.' });
+      return;
+    }
+    onResult({ inviter: data.inviter_username, status: data.redeemed ? 'used' : 'ready' });
+  } catch (error) {
+    onResult({ status: 'invalid', error: 'Could not load this invite.' });
+  }
+};
+
+const redeemPendingInvite = async (sessionID, onResult) => {
   const code = sessionStorage.getItem('betaInvite');
   if (!code || !sessionID) return;
   sessionStorage.removeItem('betaInvite');
@@ -53,11 +79,9 @@ const redeemPendingInvite = async sessionID => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok && res.status >= 500) sessionStorage.setItem('betaInvite', code);
-    window.electronAPI?.showCustomNotification(
-      res.ok ? 'Beta access' : 'Invite failed',
-      data.message || data.error || 'Could not use this invite'
-    );
-    if (res.ok) window.dispatchEvent(new Event('beta-access-granted'));
+    const status = !res.ok ? (res.status === 409 ? 'used' : 'invalid') : data.already ? 'already' : 'accepted';
+    onResult({ inviter: data.inviter_username, status, error: data.error });
+    if (status === 'accepted') window.dispatchEvent(new Event('beta-access-granted'));
   } catch (error) {
     sessionStorage.setItem('betaInvite', code);
   }
@@ -67,8 +91,10 @@ export default function AccountPage() {
   const [username, setUsername] = useState(Cookies.get('username') || '');
   const [isLoggedIn, setIsLoggedIn] = useState(!!Cookies.get('sessionID'));
   const [checkingSession, setCheckingSession] = useState(true);
+  const [inviteNotice, setInviteNotice] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const reportInvite = update => setInviteNotice(current => reportInviteResult(current, update));
 
   const cookieOptions = useMemo(() => ({ expires: 30, secure: true, sameSite: 'Strict' }), []);
 
@@ -81,7 +107,10 @@ export default function AccountPage() {
         const usernameParam = params.get('username');
         const githubIdParam = params.get('githubID');
         const inviteFromUrl = params.get('betaInvite');
-        if (inviteFromUrl) sessionStorage.setItem('betaInvite', inviteFromUrl);
+        if (inviteFromUrl) {
+          sessionStorage.setItem('betaInvite', inviteFromUrl);
+          loadInvitePreview(inviteFromUrl, reportInvite);
+        }
 
         if (sessionIDParam && usernameParam && githubIdParam) {
           const verified = await fetch('/verify-session', {
@@ -97,7 +126,7 @@ export default function AccountPage() {
 
           setUsername(usernameParam);
           setIsLoggedIn(true);
-          await redeemPendingInvite(sessionIDParam);
+          await redeemPendingInvite(sessionIDParam, reportInvite);
           params.delete('sessionID');
           params.delete('username');
           params.delete('githubID');
@@ -135,10 +164,10 @@ export default function AccountPage() {
           if (savedUsername) Cookies.set('username', savedUsername, cookieOptions);
           if (savedGithubId) Cookies.set('githubID', savedGithubId, cookieOptions);
           setIsLoggedIn(true);
-          await redeemPendingInvite(sessionID);
+          await redeemPendingInvite(sessionID, reportInvite);
         } else {
           setIsLoggedIn(true);
-          await redeemPendingInvite(sessionID);
+          await redeemPendingInvite(sessionID, reportInvite);
         }
         if (inviteFromUrl) {
           params.delete('betaInvite');
@@ -152,7 +181,7 @@ export default function AccountPage() {
         const existingSession = Cookies.get('sessionID');
         if (existingSession) {
           setIsLoggedIn(true);
-          await redeemPendingInvite(existingSession);
+          await redeemPendingInvite(existingSession, reportInvite);
         }
       } finally {
         setCheckingSession(false);
@@ -207,7 +236,7 @@ export default function AccountPage() {
               Cookies.set('githubID', data.githubID, cookieOptions);
               setUsername(data.username);
               setIsLoggedIn(true);
-              await redeemPendingInvite(data.sessionID);
+              await redeemPendingInvite(data.sessionID, reportInvite);
               window.dispatchEvent(new Event('external-auth-success'));
               break;
             }
@@ -258,15 +287,25 @@ export default function AccountPage() {
     }
   }, [cookieOptions]);
 
+  const inviteDialog = (
+    <BetaInviteDialog
+      notice={inviteNotice}
+      loggedIn={isLoggedIn}
+      onClose={() => setInviteNotice(null)}
+    />
+  );
+
   if (checkingSession) {
     return (
       <Layout>
         <div>Loading...</div>
+        {inviteDialog}
       </Layout>
     );
   }
 
   return (
+    <>
     <Routes>
       <Route element={<Layout />}>
         <Route
@@ -287,5 +326,7 @@ export default function AccountPage() {
         />
       </Route>
     </Routes>
+    {inviteDialog}
+    </>
   );
 }
