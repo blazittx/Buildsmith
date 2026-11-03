@@ -47,7 +47,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "icons/icon.icns",
+      "icon": "icons/icon.png",
       "artifactName": "${productName}.${ext}"
     },
     "linux": {

@@ -1,4 +1,5 @@
 # Buildsmith
+
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3fb89cbf-7c8b-4bfd-b317-57c092ef108b/deploy-status)](https://app.netlify.com/projects/buildsmith/deploys)
 
 ![Buildsmith Landing Page](https://github.com/user-attachments/assets/7937eec6-a1cd-4ee3-b225-43ca83035f3e)
@@ -11,7 +12,7 @@
 
 <div style="display: flex; align-items: center;">
   <div style="flex: 1; padding-right: 20px;">
-    Deploy your game straight from your GitHub repository with a single click. Buildsmith packages your latest build and uploads it for free, so your testers always have the most recent version.
+    Deploy your Unity game straight from your GitHub repository with a single click. Buildsmith packages your latest build and uploads it for free, so your testers always have the most recent version.
   </div>
   <img src="https://via.placeholder.com/500" alt="One-Click Deploy" style="max-width: 45%;">
 </div>
@@ -63,7 +64,6 @@
   </div>
   <img src="https://via.placeholder.com/500" alt="Customizable UI" style="max-width: 45%;">
 </div>
-
 
 ### 📊 Playtime Tracking
 

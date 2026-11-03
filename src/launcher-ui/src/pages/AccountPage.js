@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import AccountDashboard from '../components/account/AccountDashboard';
 import BetaInviteDialog from '../components/account/BetaInviteDialog';
 import LoginScreen from '../components/account/LoginScreen';
+import AccountLoadingSkeleton from '../components/skeleton/AccountLoadingSkeleton';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 const saveInstallationPair = (installationId, accessToken) => {
@@ -298,7 +299,7 @@ export default function AccountPage() {
   if (checkingSession) {
     return (
       <Layout>
-        <div>Loading...</div>
+        <AccountLoadingSkeleton pathname={location.pathname} loggedIn={!!Cookies.get('sessionID')} />
         {inviteDialog}
       </Layout>
     );
