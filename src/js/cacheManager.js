@@ -6,7 +6,7 @@ function cacheGamesLocally(games) {
     const mainWindow = windowStore.getMainWindow();
     if (mainWindow) {
       mainWindow.webContents.executeJavaScript(
-        `localStorage.setItem('localGames', '${JSON.stringify(games)}')`
+        `localStorage.setItem('localGames', ${JSON.stringify(JSON.stringify(games))})`
       );
       console.log('✅ Cached games written to localStorage.');
     }

@@ -13,6 +13,7 @@ const electronIsDev = require('electron-is-dev');
 const { loadSettings, saveSettings } = require('./settings');
 const { initUpdater, startPeriodicChecks, checkForUpdates } = require('./updater');
 const { setMainWindow, getMainWindow, showMessage } = require('./windowStore');
+const { isAllowedHost } = require('./allowedHost');
 
 let mainWindow;
 let splash;
@@ -155,7 +156,7 @@ async function createWindow() {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             "default-src 'self' https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com https://*.r2.dev https://*.cloudflarest.com; " +
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com; " +
+              "script-src 'self' 'unsafe-inline' https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com; " +
               "style-src 'self' 'unsafe-inline' https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com https://fonts.googleapis.com; " +
               "font-src 'self' data: https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; " +
               "img-src 'self' data: https://*.diabolical.studio https://diabolical.studio https://diabolical.services https://cdn.diabolical.services https://*.github.com https://*.githubusercontent.com https://*.cloudflare.com https://*.r2.dev https://*.cloudflarest.com; " +
@@ -172,8 +173,8 @@ async function createWindow() {
     mainWindow.webContents.on('will-navigate', (event, url) => {
       const parsedUrl = new URL(url);
       const allowedDomains = [
-        'diabolical.studio', // Allow root domain
-        'diabolical.services', // Allow root domain
+        'diabolical.studio',
+        'diabolical.services',
         'buildsmith.app',
         'github.com',
         'githubusercontent.com',
@@ -181,11 +182,10 @@ async function createWindow() {
         'r2.dev',
         'fonts.googleapis.com',
         'fonts.gstatic.com',
-        'localhost',
+        ...(isLocalDev ? ['localhost'] : []),
       ];
 
-      const isAllowed = allowedDomains.some(domain => parsedUrl.hostname.endsWith(domain));
-      if (!isAllowed) {
+      if (!isAllowedHost(parsedUrl.hostname, allowedDomains)) {
         event.preventDefault();
         console.warn(`Blocked navigation to unauthorized domain: ${url}`);
       }
@@ -208,8 +208,8 @@ async function createWindow() {
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       const parsedUrl = new URL(url);
       const allowedDomains = [
-        'diabolical.studio', // Allow root domain
-        'diabolical.services', // Allow root domain
+        'diabolical.studio',
+        'diabolical.services',
         'buildsmith.app',
         'github.com',
         'githubusercontent.com',
@@ -219,8 +219,7 @@ async function createWindow() {
         'fonts.gstatic.com',
       ];
 
-      const isAllowed = allowedDomains.some(domain => parsedUrl.hostname.endsWith(domain));
-      if (!isAllowed) {
+      if (!isAllowedHost(parsedUrl.hostname, allowedDomains)) {
         console.warn(`Blocked new window to unauthorized domain: ${url}`);
         return { action: 'deny' };
       }

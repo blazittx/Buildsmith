@@ -1,6 +1,7 @@
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
+const { requireUser, gameIdFromKey, canAccessGame } = require('./access');
 
 exports.handler = async function (event, context) {
   // Only allow POST requests
@@ -24,6 +25,23 @@ exports.handler = async function (event, context) {
       version,
       files,
     } = body;
+
+    const user = await requireUser(event);
+    if (!user) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Unauthorized' }),
+        headers: { 'Content-Type': 'application/json' },
+      };
+    }
+
+    const access = new Map();
+    const allowedKey = key => {
+      const ownerId = gameIdFromKey(key);
+      if (!ownerId) return false;
+      if (!access.has(ownerId)) access.set(ownerId, canAccessGame(user, ownerId, { write: true }));
+      return access.get(ownerId);
+    };
 
     // Get R2 credentials from environment variables
     const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -63,7 +81,7 @@ exports.handler = async function (event, context) {
       const urls = [];
       for (const file of files) {
         const key = file.overwriteKey;
-        if (!key || key.includes('..')) throw new Error('Invalid upload key');
+        if (!(await allowedKey(key))) throw new Error('Invalid upload key');
         urls.push({ url: await sign(key, file.contentType || 'application/octet-stream'), key });
       }
       return {
@@ -74,11 +92,16 @@ exports.handler = async function (event, context) {
     }
 
     // Generate key based on whether it's a game upload or not
+    const safeExt = String(fileExt || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin';
     let key;
     if (isGameUpload && gameId) {
       key = `R2/${gameId}/Versions/Build-StandaloneWindows64-${version || '0.0.1'}.zip`;
+      if (!(await allowedKey(key))) throw new Error('Invalid upload key');
+    } else if (overwriteKey) {
+      key = overwriteKey;
+      if (!(await allowedKey(key))) throw new Error('Invalid upload key');
     } else {
-      key = overwriteKey || `user-uploads/${uuidv4()}.${fileExt}`;
+      key = `user-uploads/${uuidv4()}.${safeExt}`;
     }
 
     const url = await sign(key, contentType);

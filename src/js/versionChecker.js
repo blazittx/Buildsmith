@@ -6,13 +6,16 @@ async function getLatestGameVersion(gameId) {
     // First try to get version from localStorage key 'game_<gameid>'
     const mainWindow = windowStore.getMainWindow();
     if (mainWindow) {
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(gameId || '')) {
+        throw new Error('Unexpected game id');
+      }
       const gameDetailsStr = await mainWindow.webContents.executeJavaScript(
-        `localStorage.getItem('game_${gameId}')`
+        `localStorage.getItem(${JSON.stringify(`game_${gameId}`)})`
       );
       if (gameDetailsStr) {
         try {
           const gameDetails = JSON.parse(gameDetailsStr);
-          if (gameDetails && gameDetails.version) {
+            if (gameDetails && /^\d+\.\d+\.\d+$/.test(gameDetails.version || '')) {
             console.log(`Using localStorage version for ${gameId}: ${gameDetails.version}`);
             const latestVersionUrl = `https://cdn.diabolical.services/R2/${gameId}/Versions/Build-StandaloneWindows64-${gameDetails.version}.zip`;
             return { latestVersion: gameDetails.version, latestVersionUrl };

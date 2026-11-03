@@ -60,7 +60,11 @@ export default function AccountPage() {
         const githubIdParam = params.get('githubID');
 
         if (sessionIDParam && usernameParam && githubIdParam) {
-          // Handle auth callback
+          const verified = await fetch('/verify-session', { headers: { sessionID: sessionIDParam } });
+          if (!verified.ok) {
+            setCheckingSession(false);
+            return;
+          }
           Cookies.set('sessionID', sessionIDParam, cookieOptions);
           Cookies.set('username', usernameParam, cookieOptions);
           Cookies.set('githubID', githubIdParam, cookieOptions);
@@ -117,7 +121,7 @@ export default function AccountPage() {
       window.electronAPI &&
       typeof window.electronAPI.onProtocolData === 'function'
     ) {
-      window.electronAPI.onProtocolData((action, data) => {
+      window.electronAPI.onProtocolData(async (action, data) => {
         if (action === 'auth') {
           // Use provider from data
           const provider = data && data.provider ? data.provider.toLowerCase() : 'unknown';
@@ -146,7 +150,9 @@ export default function AccountPage() {
 
           // Handle each provider's data
           switch (provider) {
-            case 'github':
+            case 'github': {
+              const verified = await fetch('/verify-session', { headers: { sessionID: data.sessionID } });
+              if (!verified.ok) break;
               Cookies.set('sessionID', data.sessionID, cookieOptions);
               Cookies.set('username', data.username, cookieOptions);
               Cookies.set('githubID', data.githubID, cookieOptions);
@@ -154,6 +160,7 @@ export default function AccountPage() {
               setIsLoggedIn(true);
               window.dispatchEvent(new Event('external-auth-success'));
               break;
+            }
             case 'patreon':
               if (data.code) {
                 Cookies.set('patreonAuthCode', data.code, cookieOptions);
@@ -174,27 +181,28 @@ export default function AccountPage() {
               break;
           }
         }
-        if (action === 'github-app') {
+        if (action === 'github-app' && data.code) {
           if (window.electronAPI) {
             window.electronAPI.showCustomNotification('GitHub App', 'Successfully authorized!');
           }
-          // Find if this installation exists and update it
+          const exchanged = await fetch('/.netlify/functions/githubAppExchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: data.code }),
+          });
+          if (!exchanged.ok) return;
+          const { installationId, token } = await exchanged.json();
           let found = false;
           let count = 1;
           while (Cookies.get(`githubInstallationId${count}`)) {
-            if (Cookies.get(`githubInstallationId${count}`) === data.githubInstallationId) {
-              // Update existing installation with new token
-              Cookies.set(`githubAccessToken${count}`, data.githubAccessToken, cookieOptions);
+            if (Cookies.get(`githubInstallationId${count}`) === installationId) {
+              Cookies.set(`githubAccessToken${count}`, token, cookieOptions);
               found = true;
               break;
             }
             count++;
           }
-
-          // If not found, save as new installation
-          if (!found) {
-            saveInstallationPair(data.githubInstallationId, data.githubAccessToken);
-          }
+          if (!found) saveInstallationPair(installationId, token);
         }
       });
     }

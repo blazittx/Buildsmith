@@ -43,7 +43,7 @@ async function reserveUploads(files, sessionId, uploadUrl) {
     body: JSON.stringify({ files }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Failed to reserve upload URLs');
+  if (!res.ok) throw new Error(data.error || `Failed to reserve upload URLs (${res.status})`);
   if (!Array.isArray(data.urls) || data.urls.length !== files.length) {
     throw new Error('Upload URL response did not match the chunk list');
   }

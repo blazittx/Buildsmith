@@ -28,6 +28,7 @@ import Cookies from 'js-cookie';
 import { uploadToCdn } from '../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../utils/notify';
 import { patchStatusLabel, publishPatch } from '../../utils/publishPatch';
+import { openGitHubAppInstall } from '../../utils/githubAppInstall';
 import ConfirmDialog from '../common/ConfirmDialog';
 import SteamUploadTab from './SteamUploadTab';
 
@@ -189,9 +190,9 @@ const GameInfoPanel = ({ game }) => {
   };
 
   const handleAuthorizeMoreRepos = () => {
-    const githubAppAuthUrl =
-      'https://github.com/apps/diabolical-launcher-integration/installations/select_target';
-    window.electronAPI.openExternal(githubAppAuthUrl);
+    openGitHubAppInstall().catch(error => {
+      window.electronAPI?.showCustomNotification('GitHub App', error.message);
+    });
   };
 
   const handleGameFileSelect = file => {

@@ -10,6 +10,7 @@ import { getAllInstallationPairs } from '../../../pages/AccountPage';
 import { uploadToCdn } from '../../../utils/cdnUpload';
 import { notify, uploadErrorMessage } from '../../../utils/notify';
 import { publishPatch } from '../../../utils/publishPatch';
+import { openGitHubAppInstall } from '../../../utils/githubAppInstall';
 import {
   STEPS,
   StyledDialog,
@@ -428,9 +429,9 @@ const CreateGameDialog = ({ open, handleClose, onSave, teams }) => {
   };
 
   const handleAuthorizeMoreRepos = () => {
-    const githubAppAuthUrl =
-      'https://github.com/apps/diabolical-launcher-integration/installations/select_target';
-    window.electronAPI.openExternal(githubAppAuthUrl);
+    openGitHubAppInstall().catch(error => {
+      window.electronAPI?.showCustomNotification('GitHub App', error.message);
+    });
   };
 
   const handleTabChange = newValue => {

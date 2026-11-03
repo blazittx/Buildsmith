@@ -1,5 +1,6 @@
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { requireUser, gameIdFromKey, canAccessGame, isPublicGame } = require('./access');
 
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
@@ -12,8 +13,11 @@ exports.handler = async function (event) {
 
   try {
     const body = JSON.parse(event.body || '{}');
+    const user = await requireUser(event);
+
     const keys = Array.isArray(body.keys) ? body.keys : body.key ? [body.key] : [];
-    if (!keys.length || keys.some(key => !key || key.includes('..') || !key.startsWith('R2/'))) {
+    const gameIds = keys.map(gameIdFromKey);
+    if (!keys.length || gameIds.some(id => !id)) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'A list of R2 keys is required' }),
@@ -39,6 +43,20 @@ exports.handler = async function (event) {
         secretAccessKey: R2_SECRET_ACCESS_KEY,
       },
     });
+
+    const allowedIds = [...new Set(gameIds)];
+    for (const gameId of allowedIds) {
+      const allowed = user
+        ? await canAccessGame(user, gameId, { write: false })
+        : await isPublicGame(gameId);
+      if (!allowed) {
+        return {
+          statusCode: 403,
+          body: JSON.stringify({ error: 'You cannot download this game' }),
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+    }
 
     const urls = [];
     for (const key of keys) {

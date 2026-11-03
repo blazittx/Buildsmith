@@ -25,6 +25,7 @@ const { loadSettings, saveSettings, buildsmithPath } = require('./settings');
 const { cacheGamesLocally, readCachedGames } = require('./cacheManager');
 const { getPreferredExecutable, getAllUnityPackages } = require('./launcherUtils');
 const windowStore = require('./windowStore');
+const { isAllowedHost } = require('./allowedHost');
 
 // Track running game processes
 const runningGames = new Map();
@@ -210,8 +211,11 @@ function initIPCHandlers() {
   ipcMain.handle('is-game-running', (event, gameId) => runningGames.has(gameId));
 
   ipcMain.on('open-install-location', (event, gameId) => {
-    const gamePath = path.join(buildsmithPath, gameId);
-    exec(`explorer "${gamePath}"`);
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(gameId || '')) return;
+    const root = path.resolve(buildsmithPath);
+    const gamePath = path.resolve(root, gameId);
+    if (gamePath !== root && !gamePath.startsWith(root + path.sep)) return;
+    shell.openPath(gamePath);
   });
 
   ipcMain.on('show-context-menu', (event, gameId, position) => {
@@ -233,12 +237,7 @@ function initIPCHandlers() {
   });
 
   ipcMain.handle('cache-games-locally', (event, games) => {
-    const mainWindow = windowStore.getMainWindow();
-    if (mainWindow) {
-      mainWindow.webContents.executeJavaScript(
-        `localStorage.setItem('localGames', '${JSON.stringify(games)}')`
-      );
-    }
+    cacheGamesLocally(games);
   });
 
   ipcMain.handle('get-local-games', async () => {
@@ -482,9 +481,7 @@ function initIPCHandlers() {
         throw new Error('Blocked non-http(s) protocol');
       }
       if (
-        !['github.com', 'patreon.com', 'buildsmith.app', 'diabolical.services'].some(domain =>
-          parsed.hostname.endsWith(domain)
-        )
+        !isAllowedHost(parsed.hostname, ['github.com', 'patreon.com', 'buildsmith.app', 'diabolical.services'])
       ) {
         throw new Error('Blocked domain');
       }

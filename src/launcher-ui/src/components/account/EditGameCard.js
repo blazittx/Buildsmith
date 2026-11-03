@@ -36,7 +36,11 @@ const EditGameCard = ({ game, isInstalled, onUpdateGame }) => {
       <Stack className={'flex flex-col gap-3 w-full'}>
         <Stack className="game-details">
           <h3>{game.game_name.toUpperCase()}</h3>
-          <p>{game.description}</p>
+          <p>
+            {game.description?.length > 80
+              ? `${game.description.slice(0, 80).trimEnd()}…`
+              : game.description}
+          </p>
         </Stack>
         <Stack className={'flex gap-3'}>
           <GameButton gameVersion={'placeholder button'} />
