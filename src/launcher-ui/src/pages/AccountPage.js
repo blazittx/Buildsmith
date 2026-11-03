@@ -44,7 +44,10 @@ export const getAllInstallationPairs = () => {
 };
 
 const reportInviteResult = (current, next) => {
-  if ((current?.status === 'accepted' || current?.status === 'already') && next.status === 'ready') {
+  if (
+    (current?.status === 'accepted' || current?.status === 'already') &&
+    next.status === 'ready'
+  ) {
     return { ...current, inviter: current.inviter || next.inviter };
   }
   return { ...current, ...next, inviter: next.inviter || current?.inviter };
@@ -80,7 +83,13 @@ const redeemPendingInvite = async (sessionID, onResult) => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok && res.status >= 500) sessionStorage.setItem('betaInvite', code);
-    const status = !res.ok ? (res.status === 409 ? 'used' : 'invalid') : data.already ? 'already' : 'accepted';
+    const status = !res.ok
+      ? res.status === 409
+        ? 'used'
+        : 'invalid'
+      : data.already
+        ? 'already'
+        : 'accepted';
     onResult({ inviter: data.inviter_username, status, error: data.error });
     if (status === 'accepted') window.dispatchEvent(new Event('beta-access-granted'));
   } catch (error) {
@@ -299,7 +308,10 @@ export default function AccountPage() {
   if (checkingSession) {
     return (
       <Layout>
-        <AccountLoadingSkeleton pathname={location.pathname} loggedIn={!!Cookies.get('sessionID')} />
+        <AccountLoadingSkeleton
+          pathname={location.pathname}
+          loggedIn={!!Cookies.get('sessionID')}
+        />
         {inviteDialog}
       </Layout>
     );
@@ -307,27 +319,31 @@ export default function AccountPage() {
 
   return (
     <>
-    <Routes>
-      <Route element={<Layout />}>
-        <Route
-          index
-          element={
-            isLoggedIn ? <Navigate to="/account/dashboard" /> : <Navigate to="/account/login" />
-          }
-        />
-        <Route
-          path="login"
-          element={isLoggedIn ? <Navigate to="/account/dashboard" /> : <LoginScreen />}
-        />
-        <Route
-          path="dashboard/*"
-          element={
-            isLoggedIn ? <AccountDashboard username={username} /> : <Navigate to="/account/login" />
-          }
-        />
-      </Route>
-    </Routes>
-    {inviteDialog}
+      <Routes>
+        <Route element={<Layout />}>
+          <Route
+            index
+            element={
+              isLoggedIn ? <Navigate to="/account/dashboard" /> : <Navigate to="/account/login" />
+            }
+          />
+          <Route
+            path="login"
+            element={isLoggedIn ? <Navigate to="/account/dashboard" /> : <LoginScreen />}
+          />
+          <Route
+            path="dashboard/*"
+            element={
+              isLoggedIn ? (
+                <AccountDashboard username={username} />
+              ) : (
+                <Navigate to="/account/login" />
+              )
+            }
+          />
+        </Route>
+      </Routes>
+      {inviteDialog}
     </>
   );
 }
