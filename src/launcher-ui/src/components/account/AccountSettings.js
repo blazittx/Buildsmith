@@ -186,7 +186,7 @@ const AccountSettings = ({ username }) => {
           .find(row => row.startsWith('sessionID='))
           ?.split('=')[1];
         if (!sessionID) throw new Error('No session ID');
-        const res = await fetch('/get-user-quota', {
+        const res = await fetch('/.netlify/functions/patch-usage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionID }),

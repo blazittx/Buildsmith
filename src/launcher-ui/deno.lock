@@ -100,6 +100,7 @@
         "npm:axios@^1.7.9",
         "npm:cra-template@1.2.0",
         "npm:eslint@8.57.1",
+        "npm:fflate@~0.8.3",
         "npm:gsap@^3.12.7",
         "npm:jose@^6.0.10",
         "npm:js-cookie@^3.0.5",

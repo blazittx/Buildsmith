@@ -85,6 +85,11 @@ async function publishDirectory({ dir, gameId, version, sessionId, platform = PL
         if (target.key !== `R2/${gameId}/chunks/${hash}`) {
           throw new Error(`Storage kept a different key for R2/${gameId}/chunks/${hash}`);
         }
+        if (target.exists) {
+          uploadedBytes += bytes.length;
+          report();
+          continue;
+        }
         const put = await fetch(target.url, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/octet-stream' },

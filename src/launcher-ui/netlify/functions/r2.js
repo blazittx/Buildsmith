@@ -1,4 +1,4 @@
-const { S3Client, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const BUCKET = 'diabolicallauncher';
 
@@ -46,6 +46,34 @@ async function deletePrefix(s3, prefix) {
   } while (token);
 }
 
+async function objectSize(s3, key) {
+  try {
+    const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+    return head.ContentLength || 0;
+  } catch (error) {
+    const status = error?.$metadata?.httpStatusCode;
+    if (status === 404 || error?.name === 'NotFound') return null;
+    throw error;
+  }
+}
+
+async function listSizes(s3, prefix) {
+  const sizes = new Map();
+  let token;
+  do {
+    const listed = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET,
+        Prefix: prefix,
+        ContinuationToken: token,
+      })
+    );
+    for (const item of listed.Contents || []) sizes.set(item.Key, item.Size || 0);
+    token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
+  } while (token);
+  return sizes;
+}
+
 async function deleteKeys(s3, keys) {
   for (const key of [...new Set(keys)].filter(Boolean)) {
     await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
@@ -64,4 +92,4 @@ function cdnKey(url) {
   }
 }
 
-module.exports = { r2Client, deletePrefix, deleteKeys, cdnKey };
+module.exports = { r2Client, deletePrefix, deleteKeys, cdnKey, listSizes, objectSize };

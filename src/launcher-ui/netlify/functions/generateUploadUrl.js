@@ -2,6 +2,8 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const { requireUser, gameIdFromKey, canAccessGame } = require('./access');
+const { listSizes, objectSize } = require('./r2');
+const { assertRoom } = require('./patchUsage');
 
 exports.handler = async function (event, context) {
   // Only allow POST requests
@@ -78,11 +80,37 @@ exports.handler = async function (event, context) {
       );
 
     if (Array.isArray(files)) {
-      const urls = [];
+      const folders = new Map();
       for (const file of files) {
         const key = file.overwriteKey;
         if (!(await allowedKey(key))) throw new Error('Invalid upload key');
-        urls.push({ url: await sign(key, file.contentType || 'application/octet-stream'), key });
+        const folder = key.slice(0, key.lastIndexOf('/') + 1);
+        if (!folders.has(folder)) folders.set(folder, listSizes(s3, folder));
+      }
+      const stored = new Map();
+      for (const [folder, pending] of folders) {
+        stored.set(folder, await pending);
+      }
+      let added = 0;
+      const states = files.map(file => {
+        const key = file.overwriteKey;
+        const folder = key.slice(0, key.lastIndexOf('/') + 1);
+        const existing = stored.get(folder).get(key);
+        const next = Number(file.size_bytes) || 0;
+        added += existing == null ? next : Math.max(0, next - existing);
+        return { key, existing, contentType: file.contentType };
+      });
+      await assertRoom(s3, user.sessionId, added);
+      const urls = [];
+      for (const state of states) {
+        if (state.existing != null) {
+          urls.push({ key: state.key, exists: true });
+          continue;
+        }
+        urls.push({
+          url: await sign(state.key, state.contentType || 'application/octet-stream'),
+          key: state.key,
+        });
       }
       return {
         statusCode: 200,
@@ -104,6 +132,10 @@ exports.handler = async function (event, context) {
       key = `user-uploads/${uuidv4()}.${safeExt}`;
     }
 
+    const existing = await objectSize(s3, key);
+    const next = Number(body.size_bytes) || 0;
+    await assertRoom(s3, user.sessionId, existing == null ? next : Math.max(0, next - existing));
+
     const url = await sign(key, contentType);
 
     return {
@@ -114,7 +146,7 @@ exports.handler = async function (event, context) {
   } catch (error) {
     console.error('Error generating upload URL:', error);
     return {
-      statusCode: 500,
+      statusCode: error.statusCode || 500,
       body: JSON.stringify({ error: error.message }),
       headers: { 'Content-Type': 'application/json' },
     };

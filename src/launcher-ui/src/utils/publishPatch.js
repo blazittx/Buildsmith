@@ -101,6 +101,11 @@ async function publishZipInBrowser(file, { gameId, version, sessionId, onProgres
         const target = signed[index];
         const key = `R2/${gameId}/chunks/${hash}`;
         if (target.key !== key) throw new Error(`Storage kept a different key for ${key}`);
+        if (target.exists) {
+          uploadedBytes += bytes.length;
+          report();
+          continue;
+        }
         await putBytes(target.url, bytes, 'application/octet-stream', key);
         uploadedBytes += bytes.length;
         report();
