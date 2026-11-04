@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import OnlyImageButton from '../button/OnlyImageButton';
-import EditIcon from '@mui/icons-material/Edit';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { Stack } from '@mui/material';
 import EditGameDialog from './dialogs/EditGameDialog';
 import GameButton from '../button/GameButton';
@@ -28,7 +28,7 @@ const EditGameCard = ({ game, isInstalled, onUpdateGame }) => {
       }}
     >
       <OnlyImageButton
-        icon={EditIcon}
+        icon={SettingsRoundedIcon}
         style={{ padding: '6px' }}
         onClick={() => setEditOpen(true)}
       />
@@ -43,7 +43,7 @@ const EditGameCard = ({ game, isInstalled, onUpdateGame }) => {
           </p>
         </Stack>
         <Stack className={'flex gap-3'}>
-          <GameButton gameVersion={'placeholder button'} />
+          <GameButton isEditing gameVersion={'placeholder button'} onClick={() => {}} />
 
           {/* <HoverMenu
                     actions={[{

@@ -1,4 +1,11 @@
-const { S3Client, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const {
+  S3Client,
+  GetObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+  DeleteObjectCommand,
+} = require('@aws-sdk/client-s3');
 
 const BUCKET = 'diabolicallauncher';
 

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { SvgIcon } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import { colors } from '../../theme/colors';
 
-const GameButton = ({ gameInstalled, downloadProgress, gameVersion, onClick, gameId }) => {
+const GameButton = ({ gameInstalled, downloadProgress, gameVersion, onClick, gameId, isEditing }) => {
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ const GameButton = ({ gameInstalled, downloadProgress, gameVersion, onClick, gam
   }, [gameId]);
 
   const handleClick = () => {
+    if (isEditing) return;
     if (isRunning) {
       window.electronAPI.stopGame(gameId);
     } else {
@@ -51,10 +55,18 @@ const GameButton = ({ gameInstalled, downloadProgress, gameVersion, onClick, gam
       className="game-button shimmer-button w-full flex justify-between align-center"
       onClick={handleClick}
     >
-      <img
-        src={isRunning ? '/stop.png' : gameInstalled ? '/play.png' : '/download.png'}
-        alt={isRunning ? 'Stop' : gameInstalled ? 'Play' : 'Download'}
-      />
+      {isRunning ? (
+        <img src="/stop.png" alt="Stop" />
+      ) : gameInstalled ? (
+        <img src="/play.png" alt="Play" />
+      ) : isEditing ? (
+        <SvgIcon
+          component={DownloadIcon}
+          style={{ width: '24px', height: '24px', color: colors.text }}
+        />
+      ) : (
+        <img src="/download.png" alt="Download" />
+      )}
       <p style={{ margin: '0', fontSize: '14px' }}>{downloadProgress || gameVersion}</p>
     </button>
   );

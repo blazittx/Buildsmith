@@ -165,6 +165,7 @@ const GameCard = ({
           gameVersion={localVersion || 'Not Installed'}
           onClick={handleDownload}
           gameId={game.game_id}
+          isEditing={isEditing}
         />
       </Stack>
     </div>

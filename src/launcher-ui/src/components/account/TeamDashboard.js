@@ -365,7 +365,10 @@ const TeamDashboard = ({ teams, onUpdateTeam }) => {
       window.electronAPI?.showCustomNotification('Package Deleted', `${packageId} was removed.`);
     } catch (err) {
       console.error('Delete failed:', err);
-      window.electronAPI?.showCustomNotification('Delete Failed', err.message || 'Could not delete the package.');
+      window.electronAPI?.showCustomNotification(
+        'Delete Failed',
+        err.message || 'Could not delete the package.'
+      );
     } finally {
       setDeletingPackages(prev => {
         const next = new Set(prev);

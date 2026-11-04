@@ -481,7 +481,12 @@ function initIPCHandlers() {
         throw new Error('Blocked non-http(s) protocol');
       }
       if (
-        !isAllowedHost(parsed.hostname, ['github.com', 'patreon.com', 'buildsmith.app', 'diabolical.services'])
+        !isAllowedHost(parsed.hostname, [
+          'github.com',
+          'patreon.com',
+          'buildsmith.app',
+          'diabolical.services',
+        ])
       ) {
         throw new Error('Blocked domain');
       }
@@ -589,7 +594,12 @@ function initIPCHandlers() {
     const root = path.resolve(path.join(app.getPath('temp'), 'buildsmith-unity-packages'));
     const resolved = path.resolve(String(packagePath || ''));
     const relative = path.relative(root, resolved);
-    if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || path.extname(resolved).toLowerCase() !== '.unitypackage') {
+    if (
+      !relative ||
+      relative.startsWith('..') ||
+      path.isAbsolute(relative) ||
+      path.extname(resolved).toLowerCase() !== '.unitypackage'
+    ) {
       throw new Error('Package path is not a downloaded Unity package');
     }
 
@@ -620,7 +630,9 @@ function initIPCHandlers() {
   });
 
   ipcMain.handle('get-steam-settings', async (event, gameId) => loadSteamSettings(gameId));
-  ipcMain.handle('save-steam-settings', async (event, gameId, settings) => saveSteamSettings(gameId, settings));
+  ipcMain.handle('save-steam-settings', async (event, gameId, settings) =>
+    saveSteamSettings(gameId, settings)
+  );
   ipcMain.handle('steam-upload-build', async (event, payload) => {
     let origin = 'https://buildsmith.app';
     try {

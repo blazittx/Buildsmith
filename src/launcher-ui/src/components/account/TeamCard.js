@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarGroup, Stack, Tooltip } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OnlyImageButton from '../button/OnlyImageButton';
 import InfiniteGameScroller from '../InfiniteGameScroller';
 import EditTeamDialog from './dialogs/EditTeamDialog';
@@ -140,7 +140,7 @@ const TeamCard = ({ team, onUpdateTeam }) => {
             />
             <span style={{ lineHeight: 1 }}>{team.team_name}</span>
           </Link>
-          <OnlyImageButton icon={EditIcon} onClick={() => setEditOpen(true)} />
+          <OnlyImageButton icon={SettingsRoundedIcon} onClick={() => setEditOpen(true)} />
         </Stack>
 
         {/* Infinite Scrolling Games */}
