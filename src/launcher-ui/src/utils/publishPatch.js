@@ -45,9 +45,10 @@ async function reserve(body, sessionId) {
   return data;
 }
 
-async function putBytes(url, bytes, contentType, label) {
+async function putBytes(url, bytes, contentType, label, signal) {
   const put = await fetch(url, {
     method: 'PUT',
+    signal,
     headers: { 'Content-Type': contentType },
     body: bytes,
   });
@@ -93,25 +94,33 @@ async function publishZipInBrowser(file, { gameId, version, sessionId, onProgres
 
   let cursor = 0;
   const workers = Math.min(16, list.length);
+  const abort = new AbortController();
+  let failure = null;
   await Promise.all(
     Array.from({ length: workers }, async () => {
-      while (cursor < list.length) {
-        const index = cursor++;
-        const [hash, bytes] = list[index];
-        const target = signed[index];
-        const key = `R2/${gameId}/chunks/${hash}`;
-        if (target.key !== key) throw new Error(`Storage kept a different key for ${key}`);
-        if (target.exists) {
+      try {
+        while (cursor < list.length && !abort.signal.aborted) {
+          const index = cursor++;
+          const [hash, bytes] = list[index];
+          const target = signed[index];
+          const key = `R2/${gameId}/chunks/${hash}`;
+          if (target.key !== key) throw new Error(`Storage kept a different key for ${key}`);
+          if (target.exists) {
+            uploadedBytes += bytes.length;
+            report();
+            continue;
+          }
+          await putBytes(target.url, bytes, 'application/octet-stream', key, abort.signal);
           uploadedBytes += bytes.length;
           report();
-          continue;
         }
-        await putBytes(target.url, bytes, 'application/octet-stream', key);
-        uploadedBytes += bytes.length;
-        report();
+      } catch (error) {
+        if (!failure) failure = error;
+        abort.abort();
       }
     })
   );
+  if (failure) throw failure;
 
   const manifestKey = `R2/${gameId}/manifests/${PLATFORM}/${version}.json`;
   const reserved = await reserve(
